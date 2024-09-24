@@ -44,6 +44,7 @@ cur.execute(
 
 dp = Dispatcher()
 
+###################################################################################
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
@@ -61,7 +62,41 @@ async def command_start_handler(message: Message) -> None:
         await message.delete()
         return
     else:
+        message_main = (await message.answer(start_message, reply_markup=KeyboardCreate(menus[12]))).message_id
+        cur.execute(f"INSERT INTO users (chatID) VALUES({message.chat.id})")
+        cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
+        cur.execute(f""" UPDATE users SET name = "{message.from_user.full_name}" WHERE (chatID = {message.chat.id}) """)
+        db.commit()
+        print(f"New chat was detected! The message ID is: {message_main}")
+
+        await message.delete()
+
+    # cur.execute(
+    #     f"""
+    #         UPDATE users
+    #          SET msgID = {message_main}
+    #          WHERE (chatID = {message.chat.id})
+    #     """)
+    # db.commit()
+    # db.commit()
+
+@dp.message(Command("menu"))
+async def command_start_handler(message: Message) -> None:
+    if cur.execute(f"SELECT COUNT(*) FROM users WHERE chatID = {message.chat.id}").fetchone()[0]:
+        old_id = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {message.chat.id})").fetchone()[0]
+        print(old_id)
+
+        await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id))
+        # await methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id)
+
         message_main = (await message.answer("Главное меню", reply_markup=KeyboardCreate(menus[11]))).message_id
+        cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
+        db.commit()
+
+        await message.delete()
+        return
+    else:
+        message_main = (await message.answer(start_message, reply_markup=KeyboardCreate(menus[12]))).message_id
         cur.execute(f"INSERT INTO users (chatID) VALUES({message.chat.id})")
         cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
         cur.execute(f""" UPDATE users SET name = "{message.from_user.full_name}" WHERE (chatID = {message.chat.id}) """)
@@ -80,9 +115,9 @@ async def command_start_handler(message: Message) -> None:
     # db.commit()
 
 
-@dp.message(Command("Lol"))
-async def cmd_lol():
-    await methods.delete_message.DeleteMessage(chat_id=Message.chat.id, message_id=Message.message_id)
+@dp.message(Command("help"))
+async def command_help_handler(message: Message):
+    await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=message.message_id))
 
 # @dp.message(F.text == "Расписание")
 # async def l(message: Message) -> None:

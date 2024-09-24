@@ -32,7 +32,8 @@ menus = [
     "connect",
     "faq",
     "options",
-    "main"
+    "main",
+    "start"
 ]
 
 
@@ -43,7 +44,7 @@ def KeyboardCreate(menu_name):
         builder.button(text="Маршруты🗺️", callback_data=callbacks[1])
         builder.button(text="Погода🌦️", callback_data=callbacks[2])
 
-        builder.button(text="Полезные ресурсыℹ️", callback_data=callbacks[3])
+        builder.button(text="Полезные ресурсы📚", callback_data=callbacks[3])
         builder.button(text="Поиск книг📙", callback_data=callbacks[4])
         builder.button(text="Ответы⁉️", callback_data=callbacks[5])
 
@@ -61,8 +62,10 @@ def KeyboardCreate(menu_name):
     elif menu_name == menus[0]:
         builder.button(text="По преподавателю", callback_data=callbacks[11])
         builder.button(text="По группе", callback_data=callbacks[12])
-        builder.button(text="Назад", callback_data=callbacks[13])
+        builder.button(text="<< Назад", callback_data=callbacks[13])
         builder.adjust(2, 1)
+    elif menu_name == menus[12]:
+        builder.button(text="Начать!", callback_data=callbacks[13])
     else:
-        builder.button(text="Назад", callback_data=callbacks[13])
+        builder.button(text="<< Назад", callback_data=callbacks[13])
     return builder.as_markup()
