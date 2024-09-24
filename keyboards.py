@@ -40,7 +40,7 @@ def KeyboardCreate(menu_name):
     builder = InlineKeyboardBuilder()
     if menu_name == menus[11]:
         builder.button(text="Расписание📆", callback_data=callbacks[0])
-        builder.button(text="Маршруты⤵️", callback_data=callbacks[1])
+        builder.button(text="Маршруты🗺️", callback_data=callbacks[1])
         builder.button(text="Погода🌦️", callback_data=callbacks[2])
 
         builder.button(text="Полезные ресурсыℹ️", callback_data=callbacks[3])
