@@ -28,7 +28,7 @@ cur.execute(
         id INTEGER PRIMARY KEY,
         chatID INTEGER,
         msgID INTEGER,
-        regFlag BOOLEAN
+        geomsgID INTEGER
     )"""
 )
 
@@ -50,7 +50,6 @@ dp = Dispatcher()
 async def command_start_handler(message: Message) -> None:
     if cur.execute(f"SELECT COUNT(*) FROM users WHERE chatID = {message.chat.id}").fetchone()[0]:
         old_id = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {message.chat.id})").fetchone()[0]
-        print(old_id)
 
         await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id))
         # await methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id)
@@ -192,6 +191,378 @@ async def back(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
     await query.message.edit_text(id=message_main, text="Главное меню",
                                   reply_markup=KeyboardCreate(menus[11]))
+
+@dp.callback_query(F.data == callbacks[14])
+async def back(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Выберите ваш корпус",
+                                  reply_markup=KeyboardCreate(menus[13]))
+
+@dp.callback_query(F.data == callbacks[15])
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Вы открыли маршруты. Выберите опцию ->", reply_markup=KeyboardCreate(menus[1]))
+
+@dp.callback_query(F.data == callbacks[17])
+async def back(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await bot(methods.delete_message.DeleteMessage(message_id=message_main, chat_id=query.message.chat.id))
+    message_main = await query.message.answer(id=message_main, text="Выберите ваш корпус",
+                                  reply_markup=KeyboardCreate(menus[13]))
+    cur.execute(f""" UPDATE users SET msgID = {message_main.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+    prev_msg = cur.execute(f"SELECT geomsgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    try:
+        await bot(methods.delete_message.DeleteMessage(chat_id=query.message.chat.id, message_id=prev_msg))
+    except:
+        pass
+
+
+###################################################################################
+
+@dp.callback_query(F.data == f"{list(places.keys())[0]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[0]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[0][0],
+                                             longitude=list(location.values())[0][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+
+@dp.callback_query(F.data == f"{list(places.keys())[1]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[1]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[1][0],
+                                             longitude=list(location.values())[1][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[2]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[2]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[2]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[2][0],
+                                             longitude=list(location.values())[2][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[3]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[3]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[3][0],
+                                             longitude=list(location.values())[3][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[4]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[4]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[4][0],
+                                             longitude=list(location.values())[4][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+
+@dp.callback_query(F.data == f"{list(places.keys())[5]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[5]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[5][0],
+                                             longitude=list(location.values())[5][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[6]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[6]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[6][0],
+                                             longitude=list(location.values())[6][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[7]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[7]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[7][0],
+                                             longitude=list(location.values())[7][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[8]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[8]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[8][0],
+                                             longitude=list(location.values())[8][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[9]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[9]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[9][0],
+                                             longitude=list(location.values())[9][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[10]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[10]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[10][0],
+                                             longitude=list(location.values())[10][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[11]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[11]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[11][0],
+                                             longitude=list(location.values())[11][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[12]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[12]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[12][0],
+                                             longitude=list(location.values())[12][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[13]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[13]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[13][0],
+                                             longitude=list(location.values())[13][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[14]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[14]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[14][0],
+                                             longitude=list(location.values())[14][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[15]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[15]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[15][0],
+                                             longitude=list(location.values())[15][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[16]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[16]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[16][0],
+                                             longitude=list(location.values())[16][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[17]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[17]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[17][0],
+                                             longitude=list(location.values())[17][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[18]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[18]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[18][0],
+                                             longitude=list(location.values())[18][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[19]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[19]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[19][0],
+                                             longitude=list(location.values())[19][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[20]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[20]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[20][0],
+                                             longitude=list(location.values())[20][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[21]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[21]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[21][0],
+                                             longitude=list(location.values())[21][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[22]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[22]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[22][0],
+                                             longitude=list(location.values())[22][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[23]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[23]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[23][0],
+                                             longitude=list(location.values())[23][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[24]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[24]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[24][0],
+                                             longitude=list(location.values())[24][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+@dp.callback_query(F.data == f"{list(places.keys())[25]}")
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    await query.message.edit_text(id=message_main, text=f"Вы выбрали: {list(places.values())[25]}",
+                                  reply_markup=KeyboardCreate(menus[14]))
+
+    a = await methods.send_location.SendLocation(latitude=list(location.values())[25][0],
+                                             longitude=list(location.values())[25][1], chat_id=query.message.chat.id).as_(bot)
+
+    cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
 
 ###################################################################################
 

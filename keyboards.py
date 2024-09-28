@@ -2,6 +2,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram import F, methods
 from aiogram.types import Message, InlineKeyboardMarkup
 from aiogram import html
+from config import places
 
 callbacks = [
     "schedule",
@@ -17,7 +18,11 @@ callbacks = [
     "options",
     "schedule:teacher",
     "schedule:group",
-    "schedule:back"
+    "schedule:back",
+    "routes:global",
+    "routes:local",
+    "routes_global:back",
+    "routes_global_selected:back"
 ]
 
 menus = [
@@ -33,7 +38,9 @@ menus = [
     "faq",
     "options",
     "main",
-    "start"
+    "start",
+    "routes_global",
+    "routes_global_selected"
 ]
 
 
@@ -66,6 +73,21 @@ def KeyboardCreate(menu_name):
         builder.adjust(2, 1)
     elif menu_name == menus[12]:
         builder.button(text="Начать!", callback_data=callbacks[13])
+    elif menu_name == menus[13]:
+        a = 0
+        for i in places:
+            # builder.button(text=places[i], callback_data=f"routes:global:{list(places.keys())[a]}")
+            builder.button(text=places[i], callback_data=f"{list(places.keys())[a]}")
+            a += 1
+        builder.button(text="<< Назад", callback_data=callbacks[15])
+        builder.adjust(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1)
+    elif menu_name == menus[1]:
+        builder.button(text="Корпуса", callback_data=callbacks[14])
+        builder.button(text="Кабинеты", callback_data=callbacks[15])
+        builder.button(text="<< Назад", callback_data=callbacks[13])
+        builder.adjust(2, 1)
+    elif menu_name == menus[14]:
+        builder.button(text="<< Назад", callback_data=callbacks[17])
     else:
         builder.button(text="<< Назад", callback_data=callbacks[13])
     return builder.as_markup()
