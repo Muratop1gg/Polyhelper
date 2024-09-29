@@ -22,11 +22,15 @@ callbacks = [
     "routes:global",
     "routes:local",
     "routes_global:back",
-    "routes_global_selected:back"
+    "routes_global_selected:back",
+    "schedule_student:prev",
+    "schedule_student:next",
+    "schedule:mode",
+    "options:change_group"
 ]
 
 menus = [
-    "shedule",
+    "schedule",
     "routes",
     "weather",
     "resources",
@@ -40,7 +44,10 @@ menus = [
     "main",
     "start",
     "routes_global",
-    "routes_global_selected"
+    "routes_global_selected",
+    "schedule_student",
+    "schedule_teacher",
+    "options_group"
 ]
 
 
@@ -62,7 +69,7 @@ def KeyboardCreate(menu_name):
         builder.button(text="Обратная связь📱", callback_data=callbacks[8])
         builder.button(text="Задать вопрос❓", callback_data=callbacks[9])
 
-        builder.button(text="Настройки рассылки⏱️", callback_data=callbacks[10])
+        builder.button(text="Настройки⚙️", callback_data=callbacks[10])
 
         builder.adjust(3, 3, 1, 1, 2, 1)
 
@@ -88,6 +95,21 @@ def KeyboardCreate(menu_name):
         builder.adjust(2, 1)
     elif menu_name == menus[14]:
         builder.button(text="<< Назад", callback_data=callbacks[17])
+    elif menu_name == menus[15]:
+        builder.button(text="⬅️", callback_data=callbacks[18])
+        builder.button(text="➡️", callback_data=callbacks[19])
+        builder.button(text="Посмотреть расписание на неделю🔍", callback_data=callbacks[20])
+        builder.button(text="Изменить номер группы⚙️", callback_data=callbacks[21])
+        builder.button(text="<< Назад", callback_data=callbacks[0])
+        builder.adjust(2, 1, 1)
+    elif menu_name == menus[10]:
+        builder.button(text="Настройки рассылки🔔", callback_data=callbacks[10])
+        builder.button(text="Изменить номер группы🔢", callback_data=callbacks[21])
+        builder.button(text="<< Назад", callback_data=callbacks[13])
+        builder.adjust(1, 1, 1)
+    elif menu_name == menus[17]:
+        builder.button(text="<< Назад", callback_data=callbacks[10])
+        builder.adjust(1)
     else:
         builder.button(text="<< Назад", callback_data=callbacks[13])
     return builder.as_markup()

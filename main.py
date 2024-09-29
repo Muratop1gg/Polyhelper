@@ -2,17 +2,24 @@ import asyncio
 import sqlite3
 import logging
 import sys
+
+from aiogram.types import CallbackQuery
+
 from config import *
 
-from keyboards import InlineKeyboardBuilder, KeyboardCreate, Message, callbacks, menus
+from keyboards import KeyboardCreate, Message, callbacks, menus
 
-from os import getenv
 
-from aiogram import Bot, Dispatcher, html, types, Router
+from aiogram import Bot, Dispatcher, types
 from aiogram import F, methods
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart, callback_data, Command
+from aiogram.filters import CommandStart, Command
+from aiogram.utils.formatting import *
+
+import requests
+from datetime import datetime, timedelta
+from bs4 import BeautifulSoup
 
 
 # Bot token can be obtained via https://t.me/BotFather
@@ -28,7 +35,11 @@ cur.execute(
         id INTEGER PRIMARY KEY,
         chatID INTEGER,
         msgID INTEGER,
-        geomsgID INTEGER
+        geomsgID INTEGER,
+        groupID TEXT,
+        schMODE BOOL,
+        schDELTA INTEGER,
+        groupEDIT BOOL
     )"""
 )
 
@@ -64,6 +75,8 @@ async def command_start_handler(message: Message) -> None:
         message_main = (await message.answer(start_message, reply_markup=KeyboardCreate(menus[12]))).message_id
         cur.execute(f"INSERT INTO users (chatID) VALUES({message.chat.id})")
         cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
+        cur.execute(f""" UPDATE users SET schMODE = FALSE WHERE (chatID = {message.chat.id}) """)
+        cur.execute(f""" UPDATE users SET schDELTA = 0 WHERE (chatID = {message.chat.id}) """)
         cur.execute(f""" UPDATE users SET name = "{message.from_user.full_name}" WHERE (chatID = {message.chat.id}) """)
         db.commit()
         print(f"New chat was detected! The message ID is: {message_main}")
@@ -98,6 +111,8 @@ async def command_start_handler(message: Message) -> None:
         message_main = (await message.answer(start_message, reply_markup=KeyboardCreate(menus[12]))).message_id
         cur.execute(f"INSERT INTO users (chatID) VALUES({message.chat.id})")
         cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
+        cur.execute(f""" UPDATE users SET schDELTA = 0 WHERE (chatID = {message.chat.id}) """)
+        cur.execute(f""" UPDATE users SET schMODE = FALSE WHERE (chatID = {message.chat.id}) """)
         cur.execute(f""" UPDATE users SET name = "{message.from_user.full_name}" WHERE (chatID = {message.chat.id}) """)
         db.commit()
         print(f"New chat was detected! The message ID is: {message_main}")
@@ -119,14 +134,42 @@ async def command_help_handler(message: Message):
     await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=message.message_id))
 
 # @dp.message(F.text == "Расписание")
-# async def l(message: Message) -> None:
-#     await message.answer(text="Вы открыли меню расписания")
 
 
-# @dp.message()
-# async def al(message: Message) -> None:
-#     await message.answer("Пошел нахер")
-#     await message.delete()
+
+@dp.message()
+async def al(message: Message) -> None:
+    is_group_editing = cur.execute(f"SELECT groupEDIT FROM users WHERE (chatID = {message.chat.id})").fetchone()[0]
+
+    if is_group_editing:
+        try:
+            link = message.text
+            link = link.split("/")
+            marker1, marker2 = link[link.index("faculty") + 1], link[link.index("groups") + 1]
+
+            if "?" in marker2:
+                marker2 = marker2[0:5]
+            if checkURL(marker1, marker2):
+                cur.execute(f"""UPDATE users SET groupID = \"{marker1}-{marker2}\" WHERE (chatID = {message.chat.id})""")
+                print("We are good")
+            cur.execute(f"""UPDATE users SET groupEDIT = FALSE WHERE (chatID = {message.chat.id}) """)
+            db.commit()
+
+            old_id = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {message.chat.id})").fetchone()[0]
+
+            content = Text(Bold("Вы открыли настройки. Выберите опцию ->"))
+            message_main = (await message.answer(**content.as_kwargs(), reply_markup=KeyboardCreate(menus[10]))).message_id
+
+            cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
+            db.commit()
+
+            await (methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id)).as_(bot)
+        except:
+            pass
+
+    await message.delete()
+
+
 
 
 ###################################################################################
@@ -135,6 +178,9 @@ async def command_help_handler(message: Message):
 async def keyboard(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
     await query.message.edit_text(id=message_main, text="Вы открыли расписание. Выберите опцию ->", reply_markup=KeyboardCreate(menus[0]))
+
+    cur.execute(f""" UPDATE users SET schDELTA = 0 WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
 
 @dp.callback_query(F.data == callbacks[1])
 async def keyboard(query: types.CallbackQuery):
@@ -184,7 +230,8 @@ async def keyboard(query: types.CallbackQuery):
 @dp.callback_query(F.data == callbacks[10])
 async def keyboard(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
-    await query.message.edit_text(id=message_main, text="Вы открыли настройки рассылки. Выберите опцию ->", reply_markup=KeyboardCreate(menus[10]))
+    content = Text(Bold("Вы открыли настройки. Выберите опцию ->"))
+    await query.message.edit_text(id=message_main, **content.as_kwargs(), reply_markup=KeyboardCreate(menus[10]))
 
 @dp.callback_query(F.data == callbacks[13])
 async def back(query: types.CallbackQuery):
@@ -207,18 +254,17 @@ async def keyboard(query: types.CallbackQuery):
 async def back(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    await bot(methods.delete_message.DeleteMessage(message_id=message_main, chat_id=query.message.chat.id))
-    message_main = await query.message.answer(id=message_main, text="Выберите ваш корпус",
-                                  reply_markup=KeyboardCreate(menus[13]))
-    cur.execute(f""" UPDATE users SET msgID = {message_main.message_id} WHERE (chatID = {query.message.chat.id}) """)
-    db.commit()
-
+    # await bot(methods.delete_message.DeleteMessage(message_id=message_main, chat_id=query.message.chat.id))
     prev_msg = cur.execute(f"SELECT geomsgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
-
     try:
         await bot(methods.delete_message.DeleteMessage(chat_id=query.message.chat.id, message_id=prev_msg))
     except:
         pass
+
+    await query.message.edit_text(id=message_main, text="Выберите ваш корпус",
+                                  reply_markup=KeyboardCreate(menus[13]))
+
+
 
 
 ###################################################################################
@@ -288,7 +334,6 @@ async def keyboard(query: types.CallbackQuery):
 
     cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
-
 
 @dp.callback_query(F.data == f"{list(places.keys())[5]}")
 async def keyboard(query: types.CallbackQuery):
@@ -563,6 +608,321 @@ async def keyboard(query: types.CallbackQuery):
     cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
 
+###################################################################################
+
+@dp.callback_query(F.data == callbacks[12])
+async def l(query: CallbackQuery) -> None:
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    outputData = []
+
+    scheduleStudentCurrentDate = str(datetime.now().date() + timedelta(days=delta))
+
+    groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    localDate = datetime.strptime(scheduleStudentCurrentDate, '%Y-%m-%d').date()
+    try:
+        marker1, marker2 = map(int, groupID.split("-"))
+
+        requestLink = scheduleStudentLink.format(marker1, marker2, localDate)
+
+        contents = requests.get(requestLink)
+        match contents.status_code:
+            case 200:  # Если доступ к странице получен успешно
+                outputLessonData = {}
+                contents = contents.text
+                soup = BeautifulSoup(contents, 'lxml')
+                curSchedule = soup.find_all("li", class_="schedule__day")
+
+                workingDay = ""
+                flag = 0
+                for a in curSchedule:
+                    a = str(a)
+                    soup = BeautifulSoup(a, 'lxml')
+                    if int(soup.find("div", class_="schedule__date").text[0:2]) == int(localDate.day):
+                        workingDay = a
+                        flag = 1
+                        break
+                if flag == 0:
+                    outputLessonData['name'] = "None"
+                    outputLessonData['type'] = "None"
+                    outputLessonData['place'] = "None"
+                    outputLessonData['teacher'] = "None"
+                    outputData.append(outputLessonData)
+                    toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
+                else:
+
+                    soup = BeautifulSoup(workingDay, 'lxml')
+                    lessonsArr = soup.find_all("li", class_="lesson")
+
+                    for lesson in lessonsArr:
+                        lesson = str(lesson)
+                        soup = BeautifulSoup(lesson, 'lxml')
+                        subjectName = soup.find("div", class_="lesson__subject").text
+                        subjectPlace = soup.find("div", class_="lesson__places").text
+                        subjectTeacher = soup.find("div", class_="lesson__teachers")
+                        subjectType = soup.find("div", class_="lesson__type").text
+                        if str(subjectTeacher) == "None":
+                            subjectTeacher = "Неизвестно"
+                        else:
+                            subjectTeacher = subjectTeacher.text
+                        outputLessonData['name'] = subjectName
+                        outputLessonData['type'] = subjectType
+                        outputLessonData['place'] = subjectPlace
+                        outputLessonData['teacher'] = subjectTeacher
+
+                        outputData.append(outputLessonData)
+                        outputLessonData = {}
+
+                    schedule = outputData
+
+                    if schedule[0]['name'] != "None":
+                        toSendText = "Расписание на {0}\n\n".format(localDate.strftime('%d/%m/%Y'))#ИЗМЕНИТЬ ФОРМАТ
+                        for lesson in schedule:
+                            subjectName = lesson['name']
+                            subjectPlace = lesson['place']
+                            subjectTeacher = lesson['teacher'].strip()
+                            subjectType = lesson['type']
+                            line = "_{0}_\n📖 **{1}**\n🏢 **{2}**\n👨 **{3}**".format(subjectName, subjectType, subjectPlace, subjectTeacher)
+                            toSendText = toSendText + line + "\n\n"
+                    else:
+                        toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
+
+                await query.message.edit_text(id=message_main, text=toSendText,
+                                              reply_markup=KeyboardCreate(menus[15]))
+
+            case 404:
+                # print(requestLink)
+                await query.message.edit_text(id=message_main, text="Сайт с расписанием временно не доступен!",
+                                              reply_markup=KeyboardCreate(menus[15]))
+    except:
+        await query.message.edit_text(id=message_main, text="Чтобы посмотреть расписание, сначала добавь номер группы!",
+                                      reply_markup=KeyboardCreate(menus[15]))
+
+@dp.callback_query(F.data == callbacks[18])
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    delta = delta - 1
+
+    cur.execute(f""" UPDATE users SET schDELTA = {delta} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+    outputData = []
+
+    scheduleStudentCurrentDate = str(datetime.now().date() + timedelta(days=delta))
+
+    groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    localDate = datetime.strptime(scheduleStudentCurrentDate, '%Y-%m-%d').date()
+    try:
+        marker1, marker2 = map(int, groupID.split("-"))
+
+        requestLink = scheduleStudentLink.format(marker1, marker2, localDate)
+
+        contents = requests.get(requestLink)
+        match contents.status_code:
+            case 200:  # Если доступ к странице получен успешно
+                outputLessonData = {}
+                contents = contents.text
+                soup = BeautifulSoup(contents, 'lxml')
+                curSchedule = soup.find_all("li", class_="schedule__day")
+
+                workingDay = ""
+                flag = 0
+                for a in curSchedule:
+                    a = str(a)
+                    soup = BeautifulSoup(a, 'lxml')
+                    if int(soup.find("div", class_="schedule__date").text[0:2]) == int(localDate.day):
+                        workingDay = a
+                        flag = 1
+                        break
+                if flag == 0:
+                    outputLessonData['name'] = "None"
+                    outputLessonData['type'] = "None"
+                    outputLessonData['place'] = "None"
+                    outputLessonData['teacher'] = "None"
+                    outputData.append(outputLessonData)
+                    toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
+                else:
+
+                    soup = BeautifulSoup(workingDay, 'lxml')
+                    lessonsArr = soup.find_all("li", class_="lesson")
+
+                    for lesson in lessonsArr:
+                        lesson = str(lesson)
+                        soup = BeautifulSoup(lesson, 'lxml')
+                        subjectName = soup.find("div", class_="lesson__subject").text
+                        subjectPlace = soup.find("div", class_="lesson__places").text
+                        subjectTeacher = soup.find("div", class_="lesson__teachers")
+                        subjectType = soup.find("div", class_="lesson__type").text
+                        if str(subjectTeacher) == "None":
+                            subjectTeacher = "Неизвестно"
+                        else:
+                            subjectTeacher = subjectTeacher.text
+                        outputLessonData['name'] = subjectName
+                        outputLessonData['type'] = subjectType
+                        outputLessonData['place'] = subjectPlace
+                        outputLessonData['teacher'] = subjectTeacher
+
+                        outputData.append(outputLessonData)
+                        outputLessonData = {}
+
+                    schedule = outputData
+
+                    if schedule[0]['name'] != "None":
+                        toSendText = "Расписание на {0}\n\n".format(localDate.strftime('%d/%m/%Y'))  # ИЗМЕНИТЬ ФОРМАТ
+                        for lesson in schedule:
+                            subjectName = lesson['name']
+                            subjectPlace = lesson['place']
+                            subjectTeacher = lesson['teacher'].strip()
+                            subjectType = lesson['type']
+                            line = "_{0}_\n📖 **{1}**\n🏢 **{2}**\n👨 **{3}**".format(subjectName, subjectType,
+                                                                                   subjectPlace, subjectTeacher)
+                            toSendText = toSendText + line + "\n\n"
+                    else:
+                        toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
+
+                await query.message.edit_text(id=message_main, text=toSendText,
+                                              reply_markup=KeyboardCreate(menus[15]))
+
+            case 404:
+                # print(requestLink)
+                await query.message.edit_text(id=message_main, text="Сайт с расписанием временно не доступен!",
+                                              reply_markup=KeyboardCreate(menus[15]))
+    except:
+        await query.message.edit_text(id=message_main, text="Чтобы посмотреть расписание, сначала добавь номер группы!",
+                                      reply_markup=KeyboardCreate(menus[15]))
+
+@dp.callback_query(F.data == callbacks[19])
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    delta = delta + 1
+
+    cur.execute(f""" UPDATE users SET schDELTA = {delta} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+    outputData = []
+
+    scheduleStudentCurrentDate = str(datetime.now().date() + timedelta(days=delta))
+
+    groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    localDate = datetime.strptime(scheduleStudentCurrentDate, '%Y-%m-%d').date()
+    try:
+        marker1, marker2 = map(int, groupID.split("-"))
+
+        requestLink = scheduleStudentLink.format(marker1, marker2, localDate)
+
+        contents = requests.get(requestLink)
+        match contents.status_code:
+            case 200:  # Если доступ к странице получен успешно
+                outputLessonData = {}
+                contents = contents.text
+                soup = BeautifulSoup(contents, 'lxml')
+                curSchedule = soup.find_all("li", class_="schedule__day")
+
+                workingDay = ""
+                flag = 0
+                for a in curSchedule:
+                    a = str(a)
+                    soup = BeautifulSoup(a, 'lxml')
+                    if int(soup.find("div", class_="schedule__date").text[0:2]) == int(localDate.day):
+                        workingDay = a
+                        flag = 1
+                        break
+                if flag == 0:
+                    outputLessonData['name'] = "None"
+                    outputLessonData['type'] = "None"
+                    outputLessonData['place'] = "None"
+                    outputLessonData['teacher'] = "None"
+                    outputData.append(outputLessonData)
+                    toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
+                else:
+
+                    soup = BeautifulSoup(workingDay, 'lxml')
+                    lessonsArr = soup.find_all("li", class_="lesson")
+
+                    for lesson in lessonsArr:
+                        lesson = str(lesson)
+                        soup = BeautifulSoup(lesson, 'lxml')
+                        subjectName = soup.find("div", class_="lesson__subject").text
+                        subjectPlace = soup.find("div", class_="lesson__places").text
+                        subjectTeacher = soup.find("div", class_="lesson__teachers")
+                        subjectType = soup.find("div", class_="lesson__type").text
+                        if str(subjectTeacher) == "None":
+                            subjectTeacher = "Неизвестно"
+                        else:
+                            subjectTeacher = subjectTeacher.text
+                        outputLessonData['name'] = subjectName
+                        outputLessonData['type'] = subjectType
+                        outputLessonData['place'] = subjectPlace
+                        outputLessonData['teacher'] = subjectTeacher
+
+                        outputData.append(outputLessonData)
+                        outputLessonData = {}
+
+                    schedule = outputData
+
+                    if schedule[0]['name'] != "None":
+                        toSendText = "Расписание на {0}\n\n".format(localDate.strftime('%d/%m/%Y'))  # ИЗМЕНИТЬ ФОРМАТ
+                        for lesson in schedule:
+                            subjectName = lesson['name']
+                            subjectPlace = lesson['place']
+                            subjectTeacher = lesson['teacher'].strip()
+                            subjectType = lesson['type']
+                            line = "_{0}_\n📖 **{1}**\n🏢 **{2}**\n👨 **{3}**".format(subjectName, subjectType,
+                                                                                   subjectPlace, subjectTeacher)
+                            toSendText = toSendText + line + "\n\n"
+                    else:
+                        toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
+
+                await query.message.edit_text(id=message_main, text=toSendText,
+                                              reply_markup=KeyboardCreate(menus[15]))
+
+            case 404:
+                # print(requestLink)
+                await query.message.edit_text(id=message_main, text="Сайт с расписанием временно не доступен!",
+                                              reply_markup=KeyboardCreate(menus[15]))
+    except:
+        await query.message.edit_text(id=message_main, text="Чтобы посмотреть расписание, сначала добавь номер группы!",
+                                      reply_markup=KeyboardCreate(menus[15]))
+
+@dp.callback_query(F.data == callbacks[21])
+async def l(query: CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    group_id = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    cur.execute(f"""UPDATE users SET groupEDIT = TRUE WHERE (chatID = {query.message.chat.id})""")
+    db.commit()
+    flag = False
+    try:
+        marker1, marker2 = map(int, group_id.split("-"))
+        contents = requests.get(
+            scheduleStudentLink.format(marker1, marker2, datetime.strptime("2024-09-28", '%Y-%m-%d').date()))
+        if contents.status_code == 200:
+            contents = contents.text
+            soup = BeautifulSoup(contents, 'lxml')
+            group_id = soup.find("span", class_="lesson__group").text
+            flag = True
+    except:
+        flag = False
+
+    if flag:
+        await query.message.edit_text(id=message_main, text=f"Твоя группа: {group_id} \n"
+                                                            "Чтобы изменить номер просто пришли мне ссылку на твоё расписание\n"
+                                                            "Например, https://ruz.spbstu.ru/faculty/123/groups/41112", reply_markup=KeyboardCreate(menus[17]))
+    else:
+        await query.message.edit_text(id=message_main, text=f"Твоя группа ещё не добавлена!\n"
+                                                            "Чтобы изменить номер просто пришли мне ссылку на твоё расписание\n"
+                                                            "Например, https://ruz.spbstu.ru/faculty/123/groups/41112",
+                                      reply_markup=KeyboardCreate(menus[17]))
 
 ###################################################################################
 
@@ -578,6 +938,12 @@ async def main() -> None:
     # And the run events dispatching
     await dp.start_polling(bot)
 
+def checkURL(m1,m2):
+    response = requests.get(scheduleStudentLink.format(m1, m2, datetime.now().date()))
+    if int(response.status_code) == 200:
+        return True
+    else:
+        return False
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
