@@ -135,6 +135,18 @@ async def command_help_handler(message: Message):
 
 # @dp.message(F.text == "Расписание")
 
+@dp.message(Command("shout"))
+async def command_help_handler(message: Message):
+    if message.chat.id == cur.execute(f"""SELECT chatID FROM users WHERE (name = "Muratop1gg")""").fetchone()[0]:
+        msg_to_send = message.text.replace("/shout", "")
+        chats = cur.execute(f"""SELECT chatID FROM users""").fetchall()
+
+        for i in range (0, chats.__len__()):
+            await methods.send_message.SendMessage(chat_id=chats[i][0], text=msg_to_send).as_(bot)
+
+    await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=message.message_id))
+
+# @dp.message(F.text == "Расписание")
 
 
 @dp.message()
@@ -281,7 +293,6 @@ async def keyboard(query: types.CallbackQuery):
 
     cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
-
 
 @dp.callback_query(F.data == f"{list(places.keys())[1]}")
 async def keyboard(query: types.CallbackQuery):
@@ -616,90 +627,14 @@ async def l(query: CallbackQuery) -> None:
 
     delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    outputData = []
-
     scheduleStudentCurrentDate = str(datetime.now().date() + timedelta(days=delta))
 
     groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
     localDate = datetime.strptime(scheduleStudentCurrentDate, '%Y-%m-%d').date()
-    try:
-        marker1, marker2 = map(int, groupID.split("-"))
 
-        requestLink = scheduleStudentLink.format(marker1, marker2, localDate)
-
-        contents = requests.get(requestLink)
-        match contents.status_code:
-            case 200:  # Если доступ к странице получен успешно
-                outputLessonData = {}
-                contents = contents.text
-                soup = BeautifulSoup(contents, 'lxml')
-                curSchedule = soup.find_all("li", class_="schedule__day")
-
-                workingDay = ""
-                flag = 0
-                for a in curSchedule:
-                    a = str(a)
-                    soup = BeautifulSoup(a, 'lxml')
-                    if int(soup.find("div", class_="schedule__date").text[0:2]) == int(localDate.day):
-                        workingDay = a
-                        flag = 1
-                        break
-                if flag == 0:
-                    outputLessonData['name'] = "None"
-                    outputLessonData['type'] = "None"
-                    outputLessonData['place'] = "None"
-                    outputLessonData['teacher'] = "None"
-                    outputData.append(outputLessonData)
-                    toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
-                else:
-
-                    soup = BeautifulSoup(workingDay, 'lxml')
-                    lessonsArr = soup.find_all("li", class_="lesson")
-
-                    for lesson in lessonsArr:
-                        lesson = str(lesson)
-                        soup = BeautifulSoup(lesson, 'lxml')
-                        subjectName = soup.find("div", class_="lesson__subject").text
-                        subjectPlace = soup.find("div", class_="lesson__places").text
-                        subjectTeacher = soup.find("div", class_="lesson__teachers")
-                        subjectType = soup.find("div", class_="lesson__type").text
-                        if str(subjectTeacher) == "None":
-                            subjectTeacher = "Неизвестно"
-                        else:
-                            subjectTeacher = subjectTeacher.text
-                        outputLessonData['name'] = subjectName
-                        outputLessonData['type'] = subjectType
-                        outputLessonData['place'] = subjectPlace
-                        outputLessonData['teacher'] = subjectTeacher
-
-                        outputData.append(outputLessonData)
-                        outputLessonData = {}
-
-                    schedule = outputData
-
-                    if schedule[0]['name'] != "None":
-                        toSendText = "Расписание на {0}\n\n".format(localDate.strftime('%d/%m/%Y'))#ИЗМЕНИТЬ ФОРМАТ
-                        for lesson in schedule:
-                            subjectName = lesson['name']
-                            subjectPlace = lesson['place']
-                            subjectTeacher = lesson['teacher'].strip()
-                            subjectType = lesson['type']
-                            line = "_{0}_\n📖 **{1}**\n🏢 **{2}**\n👨 **{3}**".format(subjectName, subjectType, subjectPlace, subjectTeacher)
-                            toSendText = toSendText + line + "\n\n"
-                    else:
-                        toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
-
-                await query.message.edit_text(id=message_main, text=toSendText,
-                                              reply_markup=KeyboardCreate(menus[15]))
-
-            case 404:
-                # print(requestLink)
-                await query.message.edit_text(id=message_main, text="Сайт с расписанием временно не доступен!",
-                                              reply_markup=KeyboardCreate(menus[15]))
-    except:
-        await query.message.edit_text(id=message_main, text="Чтобы посмотреть расписание, сначала добавь номер группы!",
-                                      reply_markup=KeyboardCreate(menus[15]))
+    await query.message.edit_text(id=message_main, **Schedule_Display(groupID, localDate).as_kwargs(),
+                                  reply_markup=KeyboardCreate(menus[15]))
 
 @dp.callback_query(F.data == callbacks[18])
 async def keyboard(query: types.CallbackQuery):
@@ -707,96 +642,20 @@ async def keyboard(query: types.CallbackQuery):
 
     delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    delta = delta - 1
+    delta -= 1
 
     cur.execute(f""" UPDATE users SET schDELTA = {delta} WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
-
-    outputData = []
 
     scheduleStudentCurrentDate = str(datetime.now().date() + timedelta(days=delta))
 
     groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
     localDate = datetime.strptime(scheduleStudentCurrentDate, '%Y-%m-%d').date()
-    try:
-        marker1, marker2 = map(int, groupID.split("-"))
 
-        requestLink = scheduleStudentLink.format(marker1, marker2, localDate)
+    await query.message.edit_text(id=message_main, **Schedule_Display(groupID, localDate).as_kwargs(),
+                                  reply_markup=KeyboardCreate(menus[15]))
 
-        contents = requests.get(requestLink)
-        match contents.status_code:
-            case 200:  # Если доступ к странице получен успешно
-                outputLessonData = {}
-                contents = contents.text
-                soup = BeautifulSoup(contents, 'lxml')
-                curSchedule = soup.find_all("li", class_="schedule__day")
-
-                workingDay = ""
-                flag = 0
-                for a in curSchedule:
-                    a = str(a)
-                    soup = BeautifulSoup(a, 'lxml')
-                    if int(soup.find("div", class_="schedule__date").text[0:2]) == int(localDate.day):
-                        workingDay = a
-                        flag = 1
-                        break
-                if flag == 0:
-                    outputLessonData['name'] = "None"
-                    outputLessonData['type'] = "None"
-                    outputLessonData['place'] = "None"
-                    outputLessonData['teacher'] = "None"
-                    outputData.append(outputLessonData)
-                    toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
-                else:
-
-                    soup = BeautifulSoup(workingDay, 'lxml')
-                    lessonsArr = soup.find_all("li", class_="lesson")
-
-                    for lesson in lessonsArr:
-                        lesson = str(lesson)
-                        soup = BeautifulSoup(lesson, 'lxml')
-                        subjectName = soup.find("div", class_="lesson__subject").text
-                        subjectPlace = soup.find("div", class_="lesson__places").text
-                        subjectTeacher = soup.find("div", class_="lesson__teachers")
-                        subjectType = soup.find("div", class_="lesson__type").text
-                        if str(subjectTeacher) == "None":
-                            subjectTeacher = "Неизвестно"
-                        else:
-                            subjectTeacher = subjectTeacher.text
-                        outputLessonData['name'] = subjectName
-                        outputLessonData['type'] = subjectType
-                        outputLessonData['place'] = subjectPlace
-                        outputLessonData['teacher'] = subjectTeacher
-
-                        outputData.append(outputLessonData)
-                        outputLessonData = {}
-
-                    schedule = outputData
-
-                    if schedule[0]['name'] != "None":
-                        toSendText = "Расписание на {0}\n\n".format(localDate.strftime('%d/%m/%Y'))  # ИЗМЕНИТЬ ФОРМАТ
-                        for lesson in schedule:
-                            subjectName = lesson['name']
-                            subjectPlace = lesson['place']
-                            subjectTeacher = lesson['teacher'].strip()
-                            subjectType = lesson['type']
-                            line = "_{0}_\n📖 **{1}**\n🏢 **{2}**\n👨 **{3}**".format(subjectName, subjectType,
-                                                                                   subjectPlace, subjectTeacher)
-                            toSendText = toSendText + line + "\n\n"
-                    else:
-                        toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
-
-                await query.message.edit_text(id=message_main, text=toSendText,
-                                              reply_markup=KeyboardCreate(menus[15]))
-
-            case 404:
-                # print(requestLink)
-                await query.message.edit_text(id=message_main, text="Сайт с расписанием временно не доступен!",
-                                              reply_markup=KeyboardCreate(menus[15]))
-    except:
-        await query.message.edit_text(id=message_main, text="Чтобы посмотреть расписание, сначала добавь номер группы!",
-                                      reply_markup=KeyboardCreate(menus[15]))
 
 @dp.callback_query(F.data == callbacks[19])
 async def keyboard(query: types.CallbackQuery):
@@ -804,96 +663,20 @@ async def keyboard(query: types.CallbackQuery):
 
     delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    delta = delta + 1
+    delta += 1
 
     cur.execute(f""" UPDATE users SET schDELTA = {delta} WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
-
-    outputData = []
 
     scheduleStudentCurrentDate = str(datetime.now().date() + timedelta(days=delta))
 
     groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
     localDate = datetime.strptime(scheduleStudentCurrentDate, '%Y-%m-%d').date()
-    try:
-        marker1, marker2 = map(int, groupID.split("-"))
 
-        requestLink = scheduleStudentLink.format(marker1, marker2, localDate)
+    await query.message.edit_text(id=message_main, **Schedule_Display(groupID, localDate).as_kwargs(),
+                                  reply_markup=KeyboardCreate(menus[15]))
 
-        contents = requests.get(requestLink)
-        match contents.status_code:
-            case 200:  # Если доступ к странице получен успешно
-                outputLessonData = {}
-                contents = contents.text
-                soup = BeautifulSoup(contents, 'lxml')
-                curSchedule = soup.find_all("li", class_="schedule__day")
-
-                workingDay = ""
-                flag = 0
-                for a in curSchedule:
-                    a = str(a)
-                    soup = BeautifulSoup(a, 'lxml')
-                    if int(soup.find("div", class_="schedule__date").text[0:2]) == int(localDate.day):
-                        workingDay = a
-                        flag = 1
-                        break
-                if flag == 0:
-                    outputLessonData['name'] = "None"
-                    outputLessonData['type'] = "None"
-                    outputLessonData['place'] = "None"
-                    outputLessonData['teacher'] = "None"
-                    outputData.append(outputLessonData)
-                    toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
-                else:
-
-                    soup = BeautifulSoup(workingDay, 'lxml')
-                    lessonsArr = soup.find_all("li", class_="lesson")
-
-                    for lesson in lessonsArr:
-                        lesson = str(lesson)
-                        soup = BeautifulSoup(lesson, 'lxml')
-                        subjectName = soup.find("div", class_="lesson__subject").text
-                        subjectPlace = soup.find("div", class_="lesson__places").text
-                        subjectTeacher = soup.find("div", class_="lesson__teachers")
-                        subjectType = soup.find("div", class_="lesson__type").text
-                        if str(subjectTeacher) == "None":
-                            subjectTeacher = "Неизвестно"
-                        else:
-                            subjectTeacher = subjectTeacher.text
-                        outputLessonData['name'] = subjectName
-                        outputLessonData['type'] = subjectType
-                        outputLessonData['place'] = subjectPlace
-                        outputLessonData['teacher'] = subjectTeacher
-
-                        outputData.append(outputLessonData)
-                        outputLessonData = {}
-
-                    schedule = outputData
-
-                    if schedule[0]['name'] != "None":
-                        toSendText = "Расписание на {0}\n\n".format(localDate.strftime('%d/%m/%Y'))  # ИЗМЕНИТЬ ФОРМАТ
-                        for lesson in schedule:
-                            subjectName = lesson['name']
-                            subjectPlace = lesson['place']
-                            subjectTeacher = lesson['teacher'].strip()
-                            subjectType = lesson['type']
-                            line = "_{0}_\n📖 **{1}**\n🏢 **{2}**\n👨 **{3}**".format(subjectName, subjectType,
-                                                                                   subjectPlace, subjectTeacher)
-                            toSendText = toSendText + line + "\n\n"
-                    else:
-                        toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
-
-                await query.message.edit_text(id=message_main, text=toSendText,
-                                              reply_markup=KeyboardCreate(menus[15]))
-
-            case 404:
-                # print(requestLink)
-                await query.message.edit_text(id=message_main, text="Сайт с расписанием временно не доступен!",
-                                              reply_markup=KeyboardCreate(menus[15]))
-    except:
-        await query.message.edit_text(id=message_main, text="Чтобы посмотреть расписание, сначала добавь номер группы!",
-                                      reply_markup=KeyboardCreate(menus[15]))
 
 @dp.callback_query(F.data == callbacks[21])
 async def l(query: CallbackQuery):
@@ -915,14 +698,15 @@ async def l(query: CallbackQuery):
         flag = False
 
     if flag:
-        await query.message.edit_text(id=message_main, text=f"Твоя группа: {group_id} \n"
-                                                            "Чтобы изменить номер просто пришли мне ссылку на твоё расписание\n"
-                                                            "Например, https://ruz.spbstu.ru/faculty/123/groups/41112", reply_markup=KeyboardCreate(menus[17]))
+        out = Text(f"Твоя группа: {group_id} \n"
+                        "Чтобы изменить номер просто пришли мне ", TextLink("ссылку", url="https://ruz.spbstu.ru"), " на твоё расписание\n"
+                        "Например: https://ruz.spbstu.ru/faculty/123/groups/41112")
+
     else:
-        await query.message.edit_text(id=message_main, text=f"Твоя группа ещё не добавлена!\n"
-                                                            "Чтобы изменить номер просто пришли мне ссылку на твоё расписание\n"
-                                                            "Например, https://ruz.spbstu.ru/faculty/123/groups/41112",
-                                      reply_markup=KeyboardCreate(menus[17]))
+        out = Text(f"Твоя группа ещё не добавлена!\n"
+                    "Чтобы изменить номер просто пришли мне ", TextLink("ссылку", url="https://ruz.spbstu.ru"), " на твоё расписание\n"
+                    "Например: https://ruz.spbstu.ru/faculty/123/groups/41112")
+    await query.message.edit_text(id=message_main, **out.as_kwargs(), reply_markup=KeyboardCreate(menus[17]))
 
 ###################################################################################
 
@@ -944,6 +728,92 @@ def checkURL(m1,m2):
         return True
     else:
         return False
+
+def Schedule_Display(groupID, localDate):
+    outputData = []
+    try:
+        marker1, marker2 = map(int, groupID.split("-"))
+
+        requestLink = scheduleStudentLink.format(marker1, marker2, localDate)
+
+        contents = requests.get(requestLink)
+        match contents.status_code:
+            case 200:  # Если доступ к странице получен успешно
+                outputLessonData = {}
+                contents = contents.text
+                soup = BeautifulSoup(contents, 'lxml')
+                curSchedule = soup.find_all("li", class_="schedule__day")
+
+                workingDay = ""
+                flag = 0
+                for a in curSchedule:
+                    a = str(a)
+                    soup = BeautifulSoup(a, 'lxml')
+                    if int(soup.find("div", class_="schedule__date").text[0:2]) == int(localDate.day):
+                        workingDay = a
+                        flag = 1
+                        break
+                if flag == 0:
+                    outputLessonData['name'] = "None"
+                    outputLessonData['type'] = "None"
+                    outputLessonData['place'] = "None"
+                    outputLessonData['teacher'] = "None"
+                    outputData.append(outputLessonData)
+                    toSendText = Text("**Радуйся, политехник!", Bold("{0}".format(localDate.strftime('%d/%m/%Y'))), "занятий нет.")
+                else:
+
+                    soup = BeautifulSoup(workingDay, 'lxml')
+                    lessonsArr = soup.find_all("li", class_="lesson")
+
+                    for lesson in lessonsArr:
+                        lesson = str(lesson)
+                        soup = BeautifulSoup(lesson, 'lxml')
+                        subjectName = soup.find("div", class_="lesson__subject").text
+                        subjectPlace = soup.find("div", class_="lesson__places").text
+                        subjectTeacher = soup.find("div", class_="lesson__teachers")
+                        subjectType = soup.find("div", class_="lesson__type").text
+                        if str(subjectTeacher) == "None":
+                            subjectTeacher = "Неизвестно"
+                        else:
+                            subjectTeacher = subjectTeacher.text
+                        outputLessonData['name'] = subjectName
+                        outputLessonData['type'] = subjectType
+                        outputLessonData['place'] = subjectPlace
+                        outputLessonData['teacher'] = subjectTeacher
+
+                        outputData.append(outputLessonData)
+                        outputLessonData = {}
+
+                    schedule = outputData
+
+                    if schedule[0]['name'] != "None":
+                        toSendText = Text("Расписание на ", Underline(Bold("{0}\n\n".format(localDate.strftime('%d/%m/%Y'))))) # ИЗМЕНИТЬ ФОРМАТ
+                        for lesson in schedule:
+                            subjectName = lesson['name']
+                            subjectTime = ""
+                            for i in range(0, subjectName.find(" ")):
+                                subjectTime += subjectName[i]
+                            subjectName = subjectName.replace(subjectTime, "")
+                            subjectPlace = lesson['place']
+                            subjectTeacher = lesson['teacher'].strip()
+                            subjectType = lesson['type']
+                            if subjectType == "Практика":
+                                line = Text(Bold(Underline(f"{subjectTime}")), " -", Bold(Italic(f"{subjectName}"),"\n🔵 ", f"{subjectType}\n"),"🏢 ", Underline(f"{subjectPlace}\n"),f"👨 {subjectTeacher}")
+                            elif subjectType == "Лабораторные":
+                                line = Text(Bold(Underline(f"{subjectTime}")), " -", Bold(Italic(f"{subjectName}"),"\n🔴 ", f"{subjectType}\n"),"🏢 ", Underline(f"{subjectPlace}\n"),f"👨 {subjectTeacher}")
+                            else:
+                                line = Text(Bold(Underline(f"{subjectTime}")), " -", Bold(Italic(f"{subjectName}"),"\n🟢 ", f"{subjectType}\n"),"🏢 ", Underline(f"{subjectPlace}\n"),f"👨 {subjectTeacher}")
+
+                            toSendText = toSendText + line + "\n\n"
+                    else:
+                        toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
+
+                return toSendText
+
+            case 404:
+                return Text("Сайт с расписанием временно не доступен!")
+    except:
+        return Text("Чтобы посмотреть расписание, сначала добавь номер группы!")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
