@@ -4,6 +4,7 @@ from aiogram.types import Message, InlineKeyboardMarkup
 from aiogram import html
 from config import places
 
+
 callbacks = [
     "schedule",
     "routes",
@@ -45,9 +46,10 @@ menus = [
     "start",
     "routes_global",
     "routes_global_selected",
-    "schedule_student",
+    "schedule_student_day",
     "schedule_teacher",
-    "options_group"
+    "options_group",
+    "schedule_student_week"
 ]
 
 
@@ -99,6 +101,13 @@ def KeyboardCreate(menu_name):
         builder.button(text="⬅️", callback_data=callbacks[18])
         builder.button(text="➡️", callback_data=callbacks[19])
         builder.button(text="Посмотреть расписание на неделю🔍", callback_data=callbacks[20])
+        builder.button(text="Изменить номер группы⚙️", callback_data=callbacks[21])
+        builder.button(text="<< Назад", callback_data=callbacks[0])
+        builder.adjust(2, 1, 1)
+    elif menu_name == menus[18]:
+        builder.button(text="⬅️", callback_data=callbacks[18])
+        builder.button(text="➡️", callback_data=callbacks[19])
+        builder.button(text="Посмотреть расписание на день🔍", callback_data=callbacks[20])
         builder.button(text="Изменить номер группы⚙️", callback_data=callbacks[21])
         builder.button(text="<< Назад", callback_data=callbacks[0])
         builder.adjust(2, 1, 1)

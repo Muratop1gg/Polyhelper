@@ -18,6 +18,8 @@ from aiogram.filters import CommandStart, Command
 from aiogram.utils.formatting import *
 
 import requests
+
+
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 
@@ -199,30 +201,37 @@ async def keyboard(query: types.CallbackQuery):
 @dp.callback_query(F.data == callbacks[2])
 async def keyboard(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
-    res = requests.get("http://api.openweathermap.org/data/2.5/weather",
-                       params={'lat': list(location.values())[19][0], 'lon': list(location.values())[19][1], 'exclude': 'daily', 'units': 'metric', 'lang': 'ru',
-                               'APPID': WEATHER_API_KEY})
-    data = res.json()
+    output = Text("Связываюсь с сервером, пожалуйста подожди...")
+    await query.message.edit_text(**output.as_kwargs(), id=message_main)
 
-    a = str(data['weather'][0]['description'])
+    try:
+        res = requests.get("https://api.weatherapi.com/v1//current.json",
+                           params={'q': f"{list(location.values())[19][0]}, {list(location.values())[19][1]}",
+                                   'lang': 'ru', 'key': WEATHER_API_KEY})
+        data = res.json()
 
-    if a == "ясно":
-        a += "☀️"
-    elif a == "пасмурно":
-        a += "☁️"
-    elif a == "переменная облачность":
-        a += "🌤️"
-    elif a == "облачно с прояснениями":
-        a += "⛅"
-    elif a == "дождь":
-        a += "🌧️"
-    elif a == "небольшой дождь":
-        a += "🌦️"
-    elif a == "снег":
-        a += "🌨️"
+        a = data['current']['condition']['text']
 
-    output = Text(Bold("Погода🌦️"), "\n\nСейчас в Политехе: ", Bold(Italic(a)), "\nТемпература: ",
-             Bold(Italic(str(round(data['main']['temp'])) + " °C\n")))
+        if a == "Ясно":
+            a += "☀️"
+        elif a == "Пасмурно":
+            a += "☁️"
+        elif a == "Переменная облачность":
+            a += "🌤️"
+        elif a == "Облачно с прояснениями":
+            a += "⛅"
+        elif a == "Дождь":
+            a += "🌧️"
+        elif a == "Небольшой дождь":
+            a += "🌦️"
+        elif a == "Снег":
+            a += "🌨️"
+
+        output = Text(Bold("Погода🌦️"), "\n\nСейчас в Политехе: ", Bold(Italic(a)), "\nТемпература: ",
+                      Bold(Italic(str(data['current']['temp_c']) + " °C\n")))
+    except:
+        output = Text("Прости, сервис погоды временно не доступен!")
+
     await query.message.edit_text(**output.as_kwargs(), id=message_main, reply_markup=KeyboardCreate(menus[2]))
 
 @dp.callback_query(F.data == callbacks[3])
@@ -263,6 +272,8 @@ async def keyboard(query: types.CallbackQuery):
 @dp.callback_query(F.data == callbacks[10])
 async def keyboard(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    cur.execute(f"""UPDATE users SET groupEDIT = FALSE WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
     content = Text(Bold("Вы открыли настройки. Выберите опцию ->"))
     await query.message.edit_text(id=message_main, **content.as_kwargs(), reply_markup=KeyboardCreate(menus[10]))
 
@@ -645,59 +656,104 @@ async def keyboard(query: types.CallbackQuery):
 @dp.callback_query(F.data == callbacks[12])
 async def l(query: CallbackQuery) -> None:
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
-
+    schedule_mode = cur.execute(f"SELECT schMODE FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
     delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
-
-    scheduleStudentCurrentDate = str(datetime.now().date() + timedelta(days=delta))
-
     groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    localDate = datetime.strptime(scheduleStudentCurrentDate, '%Y-%m-%d').date()
+    if (schedule_mode):
+        dp = await Schedule_Weekly_Display(groupID,
+                                           datetime.strptime(str(datetime.now().date() + timedelta(days=delta)),
+                                                             '%Y-%m-%d').date())
+        await query.message.edit_text(id=message_main, **dp.as_kwargs(),
+                                      reply_markup=KeyboardCreate(menus[18]))
+    else:
+        dp = await Schedule_Display(groupID,
+                                    datetime.strptime(str(datetime.now().date() + timedelta(days=delta)),
+                                                      '%Y-%m-%d').date())
+        await query.message.edit_text(id=message_main, **dp.as_kwargs(),
+                                      reply_markup=KeyboardCreate(menus[15]))
 
-    await query.message.edit_text(id=message_main, **Schedule_Display(groupID, localDate).as_kwargs(),
-                                  reply_markup=KeyboardCreate(menus[15]))
 
 @dp.callback_query(F.data == callbacks[18])
 async def keyboard(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
-
+    schedule_mode = cur.execute(f"SELECT schMODE FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
     delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    delta -= 1
+    if (schedule_mode):
+        delta -= 7
+    else:
+        delta -= 1
 
     cur.execute(f""" UPDATE users SET schDELTA = {delta} WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
 
-    scheduleStudentCurrentDate = str(datetime.now().date() + timedelta(days=delta))
-
     groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    localDate = datetime.strptime(scheduleStudentCurrentDate, '%Y-%m-%d').date()
-
-    await query.message.edit_text(id=message_main, **Schedule_Display(groupID, localDate).as_kwargs(),
-                                  reply_markup=KeyboardCreate(menus[15]))
-
+    if (schedule_mode):
+        dp = await Schedule_Weekly_Display(groupID,
+                                           datetime.strptime(str(datetime.now().date() + timedelta(days=delta)),
+                                                             '%Y-%m-%d').date())
+        await query.message.edit_text(id=message_main, **dp.as_kwargs(),
+                                      reply_markup=KeyboardCreate(menus[18]))
+    else:
+        dp = await Schedule_Display(groupID,
+                                    datetime.strptime(str(datetime.now().date() + timedelta(days=delta)),
+                                                      '%Y-%m-%d').date())
+        await query.message.edit_text(id=message_main, **dp.as_kwargs(),
+                                      reply_markup=KeyboardCreate(menus[15]))
 
 @dp.callback_query(F.data == callbacks[19])
 async def keyboard(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
-
+    schedule_mode = cur.execute(f"SELECT schMODE FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
     delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    delta += 1
+    if (schedule_mode):
+        delta += 7
+    else:
+        delta += 1
 
     cur.execute(f""" UPDATE users SET schDELTA = {delta} WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
 
-    scheduleStudentCurrentDate = str(datetime.now().date() + timedelta(days=delta))
-
     groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    localDate = datetime.strptime(scheduleStudentCurrentDate, '%Y-%m-%d').date()
+    if (schedule_mode):
+        dp = await Schedule_Weekly_Display(groupID,
+                                           datetime.strptime(str(datetime.now().date() + timedelta(days=delta)),
+                                                             '%Y-%m-%d').date())
+        await query.message.edit_text(id=message_main, **dp.as_kwargs(),
+                                      reply_markup=KeyboardCreate(menus[18]))
+    else:
+        dp = await Schedule_Display(groupID,
+                                    datetime.strptime(str(datetime.now().date() + timedelta(days=delta)),
+                                                      '%Y-%m-%d').date())
+        await query.message.edit_text(id=message_main, **dp.as_kwargs(),
+                                      reply_markup=KeyboardCreate(menus[15]))
 
-    await query.message.edit_text(id=message_main, **Schedule_Display(groupID, localDate).as_kwargs(),
-                                  reply_markup=KeyboardCreate(menus[15]))
+@dp.callback_query(F.data == callbacks[20])
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    schedule_mode = cur.execute(f"SELECT schMODE FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    delta = cur.execute(f"SELECT schDELTA FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    groupID = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
+    cur.execute(f""" UPDATE users SET schMODE = {not schedule_mode} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+    schedule_mode = not schedule_mode
+
+    if (schedule_mode):
+        dp = await Schedule_Weekly_Display(groupID, datetime.strptime(str(datetime.now().date() + timedelta(days=delta)),
+                                                                      '%Y-%m-%d').date())
+        await query.message.edit_text(id=message_main, **dp.as_kwargs(),
+                                      reply_markup=KeyboardCreate(menus[18]))
+    else:
+        dp = await Schedule_Display(groupID,
+                                           datetime.strptime(str(datetime.now().date() + timedelta(days=delta)),
+                                                             '%Y-%m-%d').date())
+        await query.message.edit_text(id=message_main, **dp.as_kwargs(),
+                                      reply_markup=KeyboardCreate(menus[15]))
 
 @dp.callback_query(F.data == callbacks[21])
 async def l(query: CallbackQuery):
@@ -743,14 +799,140 @@ async def main() -> None:
     # And the run events dispatching
     await dp.start_polling(bot)
 
-def checkURL(m1,m2):
+async def checkURL(m1,m2):
     response = requests.get(scheduleStudentLink.format(m1, m2, datetime.now().date()))
     if int(response.status_code) == 200:
         return True
     else:
         return False
 
-def Schedule_Display(groupID, localDate):
+def place_formatter(date):
+    date = date.replace("учебный корпус", "ук")
+    date = date.replace("Главное здание", "ГЗ")
+    date = date.replace("Лабораторный корпус", "Лаб. к")
+    date = date.replace("Химический корпус", "Хим. к")
+    date = date.replace("Механический корпус", "Мех. к")
+    date = date.replace("Научно-исследовательский корпус", "НИК")
+    date = date.replace("Гидротехнический корпус-1", "ГТК-1")
+    date = date.replace("Гидротехнический корпус-2", "ГТК-2")
+    date = date.replace("Спорткомплекс, ауд. Спортивный зал", "Спорткомплекс")
+    date = date.replace(", ауд. Нет", "")
+    date = date.replace("ауд. ", "")
+    return date
+
+
+def subject_name_formatter(date):
+    date = date.replace("Безопасность жизнедеятельности", "БЖД")
+    date = date.replace("Модуль саморазвития ", "")
+    date = date.replace("Элективная физическая культура и спорт", "Физ-ра")
+    date = date.replace("Теория электрических цепей", "ТЭЦ")
+    date = date.replace("Математический анализ", "Мат. Анализ")
+    date = date.replace("Введение в моделирование технических задач", "ВвМТЗ")
+    date = date.replace("Иностранный язык:", "Ин. Яз.")
+    date = date.replace("Базовый курс", "")
+    date = date.replace("(", "").replace(")", "")
+    return date
+
+
+def date_extender(date):
+    date = date.replace("янв.", "января")
+    date = date.replace("фев.", "февраля")
+    date = date.replace("мар.", "марта")
+    date = date.replace("апр.", "апреля")
+    date = date.replace("май.", "мая")
+    date = date.replace("июн.", "июня")
+    date = date.replace("июл.", "июля")
+    date = date.replace("авг.", "августа")
+    date = date.replace("сент.", "сентября")
+    date = date.replace("окт.", "октября")
+    date = date.replace("нояб.", "ноября")
+    date = date.replace("дек.", "декабря")
+
+    date = date.replace("пн", "Понедельник")
+    date = date.replace("вт", "Вторник")
+    date = date.replace("ср", "Среда")
+    date = date.replace("чт", "Четверг")
+    date = date.replace("пт", "Пятница")
+    date = date.replace("сб", "Суббота")
+    date = date.replace("вс", "Воскресенье")
+    return date
+
+
+async def Schedule_Weekly_Display(groupID, localDate):
+    outputData = []
+    try:
+        marker1, marker2 = map(int, groupID.split("-"))
+
+        requestLink = scheduleStudentLink.format(marker1, marker2, localDate)
+
+        contents = requests.get(requestLink)
+        match contents.status_code:
+            case 200:  # Если доступ к странице получен успешно
+                outputLessonData = {}
+                contents = contents.text
+                soup = BeautifulSoup(contents, 'lxml')
+                curSchedule = soup.find_all("li", class_="schedule__day")
+
+                toSendText =Text("")
+
+
+                for a in curSchedule:
+                    soup = BeautifulSoup(str(a), 'lxml')
+
+                    date = soup.find("div", class_="schedule__date").text + "\n"
+
+                    toSendText += Bold(Underline(date_extender(date)))
+
+                    lessonsArr = soup.find_all("li", class_="lesson")
+
+                    for lesson in lessonsArr:
+                        lesson = str(lesson)
+                        soup = BeautifulSoup(lesson, 'lxml')
+                        subjectName = soup.find("div", class_="lesson__subject").text
+                        subjectPlace = soup.find("div", class_="lesson__places").text.replace(", ",",")
+                        subjectType = soup.find("div", class_="lesson__type").text
+
+                        outputLessonData['name'] = subjectName
+                        outputLessonData['type'] = subjectType
+                        outputLessonData['place'] = subjectPlace
+
+                        outputData.append(outputLessonData)
+                        outputLessonData = {}
+
+                    schedule = outputData
+
+                    if schedule[0]['name'] != "None":
+                        for lesson in schedule:
+                            subjectName = lesson['name']
+                            subjectTime = ""
+                            for i in range(0, subjectName.find(" ")):
+                                subjectTime += subjectName[i]
+                            subjectName = subject_name_formatter(subjectName.replace(subjectTime, ""))
+                            subjectPlace = place_formatter(lesson['place'])
+
+                            subjectType = lesson['type']
+                            if subjectType == "Практика":
+                                line = Text(f"    🔵 ", Bold(Underline(f"{subjectTime}")), " - ", Underline(f"{subjectPlace}")," -", Text(Bold(Italic(f"{subjectName}"))))
+                            elif subjectType == "Лабораторные":
+                                line = Text(f"    🔴 ", Bold(Underline(f"{subjectTime}")), " - ", Underline(f"{subjectPlace}")," -", Text(Bold(Italic(f"{subjectName}"))))
+                            else:
+                                line = Text(f"    🟢 ", Bold(Underline(f"{subjectTime}")), " - ", Underline(f"{subjectPlace}")," -", Text(Bold(Italic(f"{subjectName}"))))
+
+                            toSendText = toSendText + line + "\n"
+                    else:
+                        toSendText = "**Радуйся, политехник! Занятий нет.**"
+
+                    toSendText += Text("\n")
+                    outputData = []
+                toSendText = Text("Расписание на неделю:\n\n") + toSendText
+                return toSendText
+
+            case 404:
+                return "Сайт с расписанием временно не доступен!"
+    except:
+        return "Чтобы посмотреть расписание, сначала добавь номер группы!"
+
+async def Schedule_Display(groupID, localDate):
     outputData = []
     try:
         marker1, marker2 = map(int, groupID.split("-"))
@@ -819,11 +1001,11 @@ def Schedule_Display(groupID, localDate):
                             subjectTeacher = lesson['teacher'].strip()
                             subjectType = lesson['type']
                             if subjectType == "Практика":
-                                line = Text(Bold(Underline(f"{subjectTime}")), " -", Bold(Italic(f"{subjectName}"),"\n🔵 ", f"{subjectType}\n"),"🏢 ", Underline(f"{subjectPlace}\n"),f"👨 {subjectTeacher}")
+                                line = Text(Bold(Underline(f"{subjectTime}")), " -", Bold(Italic(f"{subjectName}"),"\n    🔵 ", f"{subjectType}\n"),"    🏢 ", Underline(f"{subjectPlace}\n"),f"    👨 {subjectTeacher}")
                             elif subjectType == "Лабораторные":
-                                line = Text(Bold(Underline(f"{subjectTime}")), " -", Bold(Italic(f"{subjectName}"),"\n🔴 ", f"{subjectType}\n"),"🏢 ", Underline(f"{subjectPlace}\n"),f"👨 {subjectTeacher}")
+                                line = Text(Bold(Underline(f"{subjectTime}")), " -", Bold(Italic(f"{subjectName}"),"\n    🔴 ", f"{subjectType}\n"),"    🏢 ", Underline(f"{subjectPlace}\n"),f"    👨 {subjectTeacher}")
                             else:
-                                line = Text(Bold(Underline(f"{subjectTime}")), " -", Bold(Italic(f"{subjectName}"),"\n🟢 ", f"{subjectType}\n"),"🏢 ", Underline(f"{subjectPlace}\n"),f"👨 {subjectTeacher}")
+                                line = Text(Bold(Underline(f"{subjectTime}")), " -", Bold(Italic(f"{subjectName}"),"\n    🟢 ", f"{subjectType}\n"),"    🏢 ", Underline(f"{subjectPlace}\n"),f"    👨 {subjectTeacher}")
 
                             toSendText = toSendText + line + "\n\n"
                     else:

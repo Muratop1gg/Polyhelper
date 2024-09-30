@@ -1,6 +1,6 @@
 from aiogram.types import BotCommand
 
-WEATHER_API_KEY = "1d846a80425c1dd58e8efcc238341ff5"
+WEATHER_API_KEY = "11383a89b8204536935185512243009"
 
 start_message = """
 Привет! Я - *Полихелпер*, твой верный помощник в мире СПбПУ! 🎓
