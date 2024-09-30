@@ -133,8 +133,6 @@ async def command_start_handler(message: Message) -> None:
 async def command_help_handler(message: Message):
     await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=message.message_id))
 
-# @dp.message(F.text == "Расписание")
-
 @dp.message(Command("shout"))
 async def command_help_handler(message: Message):
     if message.chat.id == cur.execute(f"""SELECT chatID FROM users WHERE (name = "Muratop1gg")""").fetchone()[0]:
@@ -163,7 +161,6 @@ async def al(message: Message) -> None:
                 marker2 = marker2[0:5]
             if checkURL(marker1, marker2):
                 cur.execute(f"""UPDATE users SET groupID = \"{marker1}-{marker2}\" WHERE (chatID = {message.chat.id})""")
-                print("We are good")
             cur.execute(f"""UPDATE users SET groupEDIT = FALSE WHERE (chatID = {message.chat.id}) """)
             db.commit()
 
@@ -202,7 +199,31 @@ async def keyboard(query: types.CallbackQuery):
 @dp.callback_query(F.data == callbacks[2])
 async def keyboard(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
-    await query.message.edit_text(id=message_main, text="Вы открыли погоду. Выберите опцию ->", reply_markup=KeyboardCreate(menus[2]))
+    res = requests.get("http://api.openweathermap.org/data/2.5/weather",
+                       params={'lat': list(location.values())[19][0], 'lon': list(location.values())[19][1], 'exclude': 'daily', 'units': 'metric', 'lang': 'ru',
+                               'APPID': WEATHER_API_KEY})
+    data = res.json()
+
+    a = str(data['weather'][0]['description'])
+
+    if a == "ясно":
+        a += "☀️"
+    elif a == "пасмурно":
+        a += "☁️"
+    elif a == "переменная облачность":
+        a += "🌤️"
+    elif a == "облачно с прояснениями":
+        a += "⛅"
+    elif a == "дождь":
+        a += "🌧️"
+    elif a == "небольшой дождь":
+        a += "🌦️"
+    elif a == "снег":
+        a += "🌨️"
+
+    output = Text(Bold("Погода🌦️"), "\n\nСейчас в Политехе: ", Bold(Italic(a)), "\nТемпература: ",
+             Bold(Italic(str(round(data['main']['temp'])) + " °C\n")))
+    await query.message.edit_text(**output.as_kwargs(), id=message_main, reply_markup=KeyboardCreate(menus[2]))
 
 @dp.callback_query(F.data == callbacks[3])
 async def keyboard(query: types.CallbackQuery):
