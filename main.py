@@ -2,13 +2,15 @@ import asyncio
 import sqlite3
 import logging
 import sys
+from random import randint
+
+from cats import *
 
 from aiogram.types import CallbackQuery
 
 from config import *
 
 from keyboards import KeyboardCreate, Message, callbacks, menus
-
 
 from aiogram import Bot, Dispatcher, types
 from aiogram import F, methods
@@ -26,6 +28,7 @@ from bs4 import BeautifulSoup
 
 # Bot token can be obtained via https://t.me/BotFather
 TOKEN = "7856163448:AAGitLPQ7ACiiCobiM3IGi3l5HkWREcE9FY"
+
 
 
 
@@ -64,17 +67,32 @@ async def command_start_handler(message: Message) -> None:
     if cur.execute(f"SELECT COUNT(*) FROM users WHERE chatID = {message.chat.id}").fetchone()[0]:
         old_id = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {message.chat.id})").fetchone()[0]
 
-        await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id))
+        try:
+            await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id))
+        except:
+            pass
+
+        old_id = cur.execute(f"SELECT geomsgID FROM users WHERE (chatID = {message.chat.id})").fetchone()[0]
+
+        try:
+            await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id))
+        except:
+            pass
         # await methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id)
 
         message_main = (await message.answer("Главное меню", reply_markup=KeyboardCreate(menus[11]))).message_id
         cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
         db.commit()
 
-        await message.delete()
+        try:
+            await message.delete()
+        except:
+            pass
+
+
         return
     else:
-        message_main = (await message.answer(start_message, reply_markup=KeyboardCreate(menus[12]))).message_id
+        message_main = (await message.answer(**start_message.as_kwargs(), reply_markup=KeyboardCreate(menus[12]))).message_id
         cur.execute(f"INSERT INTO users (chatID) VALUES({message.chat.id})")
         cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
         cur.execute(f""" UPDATE users SET schMODE = FALSE WHERE (chatID = {message.chat.id}) """)
@@ -83,7 +101,10 @@ async def command_start_handler(message: Message) -> None:
         db.commit()
         print(f"New chat was detected! The message ID is: {message_main}")
 
-        await message.delete()
+        try:
+            await message.delete()
+        except:
+            pass
 
     # cur.execute(
     #     f"""
@@ -98,19 +119,31 @@ async def command_start_handler(message: Message) -> None:
 async def command_start_handler(message: Message) -> None:
     if cur.execute(f"SELECT COUNT(*) FROM users WHERE chatID = {message.chat.id}").fetchone()[0]:
         old_id = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {message.chat.id})").fetchone()[0]
-        print(old_id)
 
-        await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id))
-        # await methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id)
+        try:
+            await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id))
+        except:
+            pass
+
+        old_id = cur.execute(f"SELECT geomsgID FROM users WHERE (chatID = {message.chat.id})").fetchone()[0]
+
+        try:
+            await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id))
+        except:
+            pass
 
         message_main = (await message.answer("Главное меню", reply_markup=KeyboardCreate(menus[11]))).message_id
         cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
         db.commit()
 
-        await message.delete()
+        try:
+            await message.delete()
+        except:
+            pass
+
         return
     else:
-        message_main = (await message.answer(start_message, reply_markup=KeyboardCreate(menus[12]))).message_id
+        message_main = (await message.answer(**start_message.as_kwargs(), reply_markup=KeyboardCreate(menus[12]))).message_id
         cur.execute(f"INSERT INTO users (chatID) VALUES({message.chat.id})")
         cur.execute(f""" UPDATE users SET msgID = {message_main} WHERE (chatID = {message.chat.id}) """)
         cur.execute(f""" UPDATE users SET schDELTA = 0 WHERE (chatID = {message.chat.id}) """)
@@ -119,7 +152,10 @@ async def command_start_handler(message: Message) -> None:
         db.commit()
         print(f"New chat was detected! The message ID is: {message_main}")
 
-        await message.delete()
+        try:
+            await message.delete()
+        except:
+            pass
 
     # cur.execute(
     #     f"""
@@ -133,10 +169,23 @@ async def command_start_handler(message: Message) -> None:
 
 @dp.message(Command("help"))
 async def command_help_handler(message: Message):
-    await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=message.message_id))
+    try:
+        await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=message.message_id))
+    except:
+        pass
+
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {message.chat.id})").fetchone()[0]
+
+    try:
+        await methods.edit_message_text.EditMessageText(message_id=message_main, **start_message.as_kwargs(),
+                                      reply_markup=KeyboardCreate(menus[12]), chat_id=message.chat.id).as_(bot)
+    except:
+        pass
+
+
 
 @dp.message(Command("shout"))
-async def command_help_handler(message: Message):
+async def command_shout_handler(message: Message):
     if message.chat.id == cur.execute(f"""SELECT chatID FROM users WHERE (name = "Muratop1gg")""").fetchone()[0]:
         msg_to_send = message.text.replace("/shout", "")
         chats = cur.execute(f"""SELECT chatID FROM users""").fetchall()
@@ -161,7 +210,7 @@ async def al(message: Message) -> None:
 
             if "?" in marker2:
                 marker2 = marker2[0:5]
-            if checkURL(marker1, marker2):
+            if await checkURL(marker1, marker2):
                 cur.execute(f"""UPDATE users SET groupID = \"{marker1}-{marker2}\" WHERE (chatID = {message.chat.id})""")
             cur.execute(f"""UPDATE users SET groupEDIT = FALSE WHERE (chatID = {message.chat.id}) """)
             db.commit()
@@ -252,7 +301,7 @@ async def keyboard(query: types.CallbackQuery):
 @dp.callback_query(F.data == callbacks[6])
 async def keyboard(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
-    await query.message.edit_text(id=message_main, text="Вы открыли мемы и картинки. Выберите опцию ->", reply_markup=KeyboardCreate(menus[6]))
+    await query.message.edit_text(id=message_main, text="😂Мемы и Картинки! Выбирай!", reply_markup=KeyboardCreate(menus[6]))
 
 @dp.callback_query(F.data == callbacks[7])
 async def keyboard(query: types.CallbackQuery):
@@ -651,7 +700,7 @@ async def keyboard(query: types.CallbackQuery):
     cur.execute(f""" UPDATE users SET geomsgID = {a.message_id} WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
 
-###################################################################################
+#################################  РАСПИСАНИЕ  #####################################
 
 @dp.callback_query(F.data == callbacks[12])
 async def l(query: CallbackQuery) -> None:
@@ -672,7 +721,6 @@ async def l(query: CallbackQuery) -> None:
                                                       '%Y-%m-%d').date())
         await query.message.edit_text(id=message_main, **dp.as_kwargs(),
                                       reply_markup=KeyboardCreate(menus[15]))
-
 
 @dp.callback_query(F.data == callbacks[18])
 async def keyboard(query: types.CallbackQuery):
@@ -755,6 +803,7 @@ async def keyboard(query: types.CallbackQuery):
         await query.message.edit_text(id=message_main, **dp.as_kwargs(),
                                       reply_markup=KeyboardCreate(menus[15]))
 
+
 @dp.callback_query(F.data == callbacks[21])
 async def l(query: CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
@@ -784,6 +833,50 @@ async def l(query: CallbackQuery):
                     "Чтобы изменить номер просто пришли мне ", TextLink("ссылку", url="https://ruz.spbstu.ru"), " на твоё расписание\n"
                     "Например: https://ruz.spbstu.ru/faculty/123/groups/41112")
     await query.message.edit_text(id=message_main, **out.as_kwargs(), reply_markup=KeyboardCreate(menus[17]))
+
+#################################      МЕМЫ     #####################################
+
+@dp.callback_query(F.data == callbacks[22]) # Назад из категории
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    new_msg = (await methods.send_message.SendMessage(text="😂Мемы и Картинки! Выбирай!",
+                                  reply_markup=KeyboardCreate(menus[6]), chat_id=query.message.chat.id).as_(bot)).message_id
+
+    cur.execute(f""" UPDATE users SET msgID = {new_msg} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+    try:
+        await methods.delete_message.DeleteMessage(chat_id=query.message.chat.id, message_id=message_main).as_(bot)
+    except:
+        pass
+
+@dp.callback_query(F.data == callbacks[23]) # Собаки
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Гав!🐶",
+                                  reply_markup=KeyboardCreate(menus[19]))
+
+@dp.callback_query(F.data == callbacks[24]) # Коты
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+
+    new_msg = (await methods.send_photo.SendPhoto(photo=cat_links[randint(0, cat_links.__len__())],
+                                       chat_id=query.message.chat.id, reply_markup=KeyboardCreate(menus[20]),
+                                       caption="Мяу!😺").as_(bot)).message_id
+
+    cur.execute(f""" UPDATE users SET msgID = {new_msg} WHERE (chatID = {query.message.chat.id}) """)
+    db.commit()
+
+    try:
+        await methods.delete_message.DeleteMessage(chat_id=query.message.chat.id, message_id=message_main).as_(bot)
+    except:
+        pass
+
+@dp.callback_query(F.data == callbacks[25]) # Преподы
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Мем с преподом:",
+                                  reply_markup=KeyboardCreate(menus[21]))
 
 ###################################################################################
 
@@ -819,7 +912,6 @@ def place_formatter(date):
     date = date.replace(", ауд. Нет", "")
     date = date.replace("ауд. ", "")
     return date
-
 
 def subject_name_formatter(date):
     date = date.replace("Безопасность жизнедеятельности", "БЖД")
@@ -912,25 +1004,26 @@ async def Schedule_Weekly_Display(groupID, localDate):
 
                             subjectType = lesson['type']
                             if subjectType == "Практика":
-                                line = Text(f"    🔵 ", Bold(Underline(f"{subjectTime}")), " - ", Underline(f"{subjectPlace}")," -", Text(Bold(Italic(f"{subjectName}"))))
+                                line = Text(f"    🔵 ", Bold(Underline(f"{subjectTime}")), " - ", f"{subjectPlace}"," -", Bold(Italic(f"{subjectName}")))
                             elif subjectType == "Лабораторные":
-                                line = Text(f"    🔴 ", Bold(Underline(f"{subjectTime}")), " - ", Underline(f"{subjectPlace}")," -", Text(Bold(Italic(f"{subjectName}"))))
+                                line = Text(f"    🔴 ", Bold(Underline(f"{subjectTime}")), " - ", f"{subjectPlace}"," -", Bold(Italic(f"{subjectName}")))
                             else:
-                                line = Text(f"    🟢 ", Bold(Underline(f"{subjectTime}")), " - ", Underline(f"{subjectPlace}")," -", Text(Bold(Italic(f"{subjectName}"))))
+                                line = Text(f"    🟢 ", Bold(Underline(f"{subjectTime}")), " - ", f"{subjectPlace}"," -", Bold(Italic(f"{subjectName}")))
 
-                            toSendText = toSendText + line + "\n"
+                            toSendText =toSendText + line + "\n"
                     else:
-                        toSendText = "**Радуйся, политехник! Занятий нет.**"
+                        toSendText = Text("Радуйся, политехник! Занятий нет.")
 
                     toSendText += Text("\n")
-                    outputData = []
-                toSendText = Text("Расписание на неделю:\n\n") + toSendText
+
+                toSendText = Text("Расписание на ") + Bold(Underline("неделю\n\n")) + toSendText
+
                 return toSendText
 
             case 404:
-                return "Сайт с расписанием временно не доступен!"
+                return Text("Сайт с расписанием временно не доступен!")
     except:
-        return "Чтобы посмотреть расписание, сначала добавь номер группы!"
+        return Text("Чтобы посмотреть расписание, сначала добавь номер группы!")
 
 async def Schedule_Display(groupID, localDate):
     outputData = []
@@ -962,7 +1055,7 @@ async def Schedule_Display(groupID, localDate):
                     outputLessonData['place'] = "None"
                     outputLessonData['teacher'] = "None"
                     outputData.append(outputLessonData)
-                    toSendText = Text("**Радуйся, политехник!", Bold("{0}".format(localDate.strftime('%d/%m/%Y'))), "занятий нет.")
+                    toSendText = Text("Радуйся, политехник! ", Bold("{0}".format(localDate.strftime('%d/%m/%Y'))), " занятий нет.")
                 else:
 
                     soup = BeautifulSoup(workingDay, 'lxml')
@@ -1009,7 +1102,7 @@ async def Schedule_Display(groupID, localDate):
 
                             toSendText = toSendText + line + "\n\n"
                     else:
-                        toSendText = "**Радуйся, политехник! {0} занятий нет.**".format(localDate.strftime('%d/%m/%Y'))
+                        toSendText = Text("Радуйся, политехник! ", Bold("{0}".format(localDate.strftime('%d/%m/%Y'))), " занятий нет.")
 
                 return toSendText
 

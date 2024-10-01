@@ -27,7 +27,11 @@ callbacks = [
     "schedule_student:prev",
     "schedule_student:next",
     "schedule:mode",
-    "options:change_group"
+    "options:change_group",
+    "memes_and_pics:back",
+    "memes_and_pics:dogs",
+    "memes_and_pics:cats",
+    "memes_and_pics:teachers",
 ]
 
 menus = [
@@ -49,7 +53,10 @@ menus = [
     "schedule_student_day",
     "schedule_teacher",
     "options_group",
-    "schedule_student_week"
+    "schedule_student_week",
+    "dogs_inner",
+    "cats_inner",
+    "teachers_inner"
 ]
 
 
@@ -119,6 +126,28 @@ def KeyboardCreate(menu_name):
     elif menu_name == menus[17]:
         builder.button(text="<< Назад", callback_data=callbacks[10])
         builder.adjust(1)
+    elif menu_name == menus[6]: # Мемы и картинки главное
+        builder.button(text="Котики", callback_data=callbacks[24])
+        builder.button(text="Собачки", callback_data=callbacks[23])
+        builder.button(text="Мемы с преподавателями", callback_data=callbacks[25])
+        builder.button(text="<< Назад", callback_data=callbacks[13])
+        builder.adjust(2, 1, 1)
+
+    elif menu_name == menus[19]: # Мемы и картинки -) Собаки
+        # builder.button(text="🔄️Обновить", callback_data=callbacks[23])
+        builder.button(text="<< Назад", callback_data=callbacks[22])
+        builder.adjust(1, 1)
+
+    elif menu_name == menus[20]: # Мемы и картинки -) Кошки
+        builder.button(text="🔄️Обновить", callback_data=callbacks[24])
+        builder.button(text="<< Назад", callback_data=callbacks[22])
+        builder.adjust(1, 1)
+
+    elif menu_name == menus[21]: # Мемы и картинки -) Учителя
+        # builder.button(text="🔄️Обновить", callback_data=callbacks[25])
+        builder.button(text="<< Назад", callback_data=callbacks[22])
+        builder.adjust(1, 1)
+
     else:
         builder.button(text="<< Назад", callback_data=callbacks[13])
     return builder.as_markup()
