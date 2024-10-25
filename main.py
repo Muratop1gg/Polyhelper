@@ -878,6 +878,42 @@ async def keyboard(query: types.CallbackQuery):
     await query.message.edit_text(id=message_main, text="Мем с преподом:",
                                   reply_markup=KeyboardCreate(menus[21]))
 
+###########################      ПОЛЕЗНЫЕ РЕСУРСЫ     ###############################
+@dp.callback_query(F.data == callbacks[26]) # Мат. Анализ
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Полезные ресурсы по Мат. Анализу📚", reply_markup=KeyboardCreate(menus[22]))
+
+@dp.callback_query(F.data == callbacks[27]) # Матлаб
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Полезные ресурсы по ВМТЗ (Matlab)📚", reply_markup=KeyboardCreate(menus[23]))
+
+@dp.callback_query(F.data == callbacks[28]) # ТЭЦ
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Полезные ресурсы по ТЭЦ📚", reply_markup=KeyboardCreate(menus[24]))
+
+@dp.callback_query(F.data == callbacks[29]) # БЖД
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Полезные ресурсы по БЖД📚", reply_markup=KeyboardCreate(menus[25]))
+
+@dp.callback_query(F.data == callbacks[30]) # Электроника
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Полезные ресурсы по Электронике📚", reply_markup=KeyboardCreate(menus[26]))
+
+@dp.callback_query(F.data == callbacks[31]) # Физика
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Полезные ресурсы по Физике📚", reply_markup=KeyboardCreate(menus[27]))
+
+@dp.callback_query(F.data == callbacks[32]) # БЖД
+async def keyboard(query: types.CallbackQuery):
+    message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    await query.message.edit_text(id=message_main, text="Полезные ресурсы по Английскому языку📚", reply_markup=KeyboardCreate(menus[28]))
+
 ###################################################################################
 
 async def start_config(bot: Bot):
