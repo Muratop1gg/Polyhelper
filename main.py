@@ -860,7 +860,7 @@ async def keyboard(query: types.CallbackQuery):
 async def keyboard(query: types.CallbackQuery):
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
-    new_msg = (await methods.send_photo.SendPhoto(photo=cat_links[randint(0, cat_links.__len__())],
+    new_msg = (await methods.send_photo.SendPhoto(photo=cat_links[randint(0, cat_links.__len__() - 1)],
                                        chat_id=query.message.chat.id, reply_markup=KeyboardCreate(menus[20]),
                                        caption="Мяу!😺").as_(bot)).message_id
 
