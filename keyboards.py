@@ -32,6 +32,15 @@ callbacks = [
     "memes_and_pics:dogs",
     "memes_and_pics:cats",
     "memes_and_pics:teachers",
+    "resources:math",
+    "resources:matlab",
+    "resources:ent",
+    "resources:bjd",
+    "resources:eld",
+    "resources:physics",
+    "resources:eng",
+    "resources:mail"
+
 ]
 
 menus = [
@@ -56,7 +65,7 @@ menus = [
     "schedule_student_week",
     "dogs_inner",
     "cats_inner",
-    "teachers_inner"
+    "teachers_inner",
 ]
 
 
@@ -147,6 +156,19 @@ def KeyboardCreate(menu_name):
         # builder.button(text="🔄️Обновить", callback_data=callbacks[25])
         builder.button(text="<< Назад", callback_data=callbacks[22])
         builder.adjust(1, 1)
+    elif menu_name == menus[3]: # Полезные ресурсы главная
+        # builder.button(text="🔄️Обновить", callback_data=callbacks[25])
+        builder.button(text="Математика", callback_data=callbacks[26])
+        builder.button(text="ВМТЗ", callback_data=callbacks[27])
+        builder.button(text="ТЭЦ", callback_data=callbacks[28])
+        builder.button(text="Электроника", callback_data=callbacks[30])
+        builder.button(text="БЖД", callback_data=callbacks[29])
+        builder.button(text="Физика", callback_data=callbacks[31])
+        builder.button(text="Английский", callback_data=callbacks[32])
+        builder.button(text="Ваша корп. почта", callback_data=callbacks[33])
+
+        builder.button(text="<< Назад", callback_data=callbacks[22])
+        builder.adjust(2, 2, 2, 2, 1, 1, 1)
 
     else:
         builder.button(text="<< Назад", callback_data=callbacks[13])
