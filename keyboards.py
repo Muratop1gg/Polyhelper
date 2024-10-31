@@ -1,7 +1,4 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram import F, methods
-from aiogram.types import Message, InlineKeyboardMarkup
-from aiogram import html
 from config import places
 
 
@@ -76,7 +73,7 @@ menus = [
 ]
 
 
-def KeyboardCreate(menu_name):
+def keyboard_create(menu_name):
     builder = InlineKeyboardBuilder()
     if menu_name == menus[11]:
         builder.button(text="Расписание📆", callback_data=callbacks[0])

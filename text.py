@@ -105,4 +105,3 @@ settingsMessage_5 = "Хэй, {0}!\nВот список доступных ком
                     "\n/dogs и /cats - собачки и котики для снятия морального напряжения" \
                     "\n/restart - перезапуск бота" \
                     "\n\ncreated by @muratop1gg with support by @lrrrtm"
-
