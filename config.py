@@ -1,4 +1,4 @@
-from aiogram.types import BotCommand as bc
+from aiogram.types import BotCommand as botCommand
 from aiogram.utils.formatting import *
 
 WEATHER_API_KEY = "11383a89b8204536935185512243009"
@@ -141,7 +141,7 @@ catLinkGet = "https://meow.senither.com/c/{0}"
 searchTeacherLink = "https://ruz.spbstu.ru/search/teacher?q="
 
 commands = [
-    bc(command="/start", description="Запустить бота"),
-    bc(command="/help", description="Получение помощи"),
-    bc(command="/menu", description="Отобразить меню")
+    botCommand(command="/start", description="Запустить бота"),
+    botCommand(command="/help", description="Получение помощи"),
+    botCommand(command="/menu", description="Отобразить меню")
 ]
