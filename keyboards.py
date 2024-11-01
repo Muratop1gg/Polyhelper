@@ -36,7 +36,10 @@ callbacks = [
     "resources:eld",
     "resources:physics",
     "resources:eng",
-    "resources:mail"
+    "resources:mail",
+    "schedule_teacher:prev",
+    "schedule_teacher:next",
+    "schedule_teacher:mode"
 
 ]
 
@@ -69,7 +72,9 @@ menus = [
     "resources_bjd",
     "resources_eld",
     "resources_physics",
-    "resources_eng"
+    "resources_eng",
+    "schedule_teacher_day",
+    "schedule_teacher_week"
 ]
 
 
@@ -121,6 +126,22 @@ def keyboard_create(menu_name):
         builder.button(text="➡️", callback_data=callbacks[19])
         builder.button(text="Посмотреть расписание на неделю🔍", callback_data=callbacks[20])
         builder.button(text="Изменить номер группы⚙️", callback_data=callbacks[21])
+        builder.button(text="<< Назад", callback_data=callbacks[0])
+        builder.adjust(2, 1, 1)
+    elif menu_name == menus[16]:
+        builder.button(text="<< Назад", callback_data=callbacks[0])
+    elif menu_name == menus[29]:
+        builder.button(text="⬅️", callback_data=callbacks[34])
+        builder.button(text="➡️", callback_data=callbacks[35])
+        builder.button(text="Посмотреть расписание на неделю🔍", callback_data=callbacks[36])
+        builder.button(text="Изменить имя преподавателя⚙️", callback_data=callbacks[11])
+        builder.button(text="<< Назад", callback_data=callbacks[0])
+        builder.adjust(2, 1, 1)
+    elif menu_name == menus[30]:
+        builder.button(text="⬅️", callback_data=callbacks[34])
+        builder.button(text="➡️", callback_data=callbacks[35])
+        builder.button(text="Посмотреть расписание на день🔍", callback_data=callbacks[36])
+        builder.button(text="Изменить имя преподавателя⚙️", callback_data=callbacks[11])
         builder.button(text="<< Назад", callback_data=callbacks[0])
         builder.adjust(2, 1, 1)
     elif menu_name == menus[18]:
