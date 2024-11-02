@@ -3,7 +3,6 @@ import sqlite3
 import logging
 import sys
 from random import randint
-from types import NoneType
 
 from cats import *
 from aiogram.types import CallbackQuery
@@ -757,11 +756,13 @@ def schedule_db_call(chat_id: int, call_type : bool):
 
 @dp.callback_query(F.data == callbacks[11])
 async def l(query: CallbackQuery) -> None:
+
+
     message_main = cur.execute(f"SELECT msgID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
     await query.message.edit_text(id=message_main, text="Введи ФИО преподавателя",
                                   reply_markup=keyboard_create(menus[16]))
-
+    cur.execute(f""" UPDATE users SET schDELTA = 0 WHERE (chatID = {query.message.chat.id}) """)
     cur.execute(f""" UPDATE users SET teacherEDIT = TRUE WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
 
@@ -844,7 +845,10 @@ async def delta_helper(message_main : int, schedule_mode : bool, delta : int, qu
     cur.execute(f""" UPDATE users SET schDELTA = {delta} WHERE (chatID = {query.message.chat.id}) """)
     db.commit()
 
-    group_id = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    if search_mode:
+        group_id = cur.execute(f"SELECT teacherNAME FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
+    else:
+        group_id = cur.execute(f"SELECT groupID FROM users WHERE (chatID = {query.message.chat.id})").fetchone()[0]
 
     await schedule_helper(message_main, schedule_mode, group_id, query.message.chat.id, delta, search_mode)
 
@@ -1308,7 +1312,6 @@ def schedule_dp(group_id, local_date):
 
 def schedule_teachers_dp(teacher_name : str, local_date):
     # %20 - вместо пробела
-
     teacher_name = teacher_name.replace(" ", "%20")
 
     request_link = f"https://ruz.spbstu.ru/search/teacher?q={teacher_name}"
@@ -1321,7 +1324,7 @@ def schedule_teachers_dp(teacher_name : str, local_date):
             if len(res) > 1:
                 to_send_text = "Найдено несколько преподавателей, напиши ФИО точнее"
                 return Text(to_send_text)
-            else:
+            elif len(res) == 1:
                 request_link = "https://ruz.spbstu.ru" + res[0]['href'] + f"?date={local_date}"
 
                 contents = requests.get(request_link)
@@ -1330,14 +1333,10 @@ def schedule_teachers_dp(teacher_name : str, local_date):
                     case 200:
                         output_lesson_data = {}
                         contents = contents.text
-
                         soup = BeautifulSoup(contents, 'lxml')
                         cur_schedule = soup.find_all("li", class_="schedule__day")
-
-
                         working_day = ""
                         flag = 0
-
                         for a in cur_schedule:
                             a = str(a)
                             soup = BeautifulSoup(a, 'lxml')
@@ -1351,10 +1350,12 @@ def schedule_teachers_dp(teacher_name : str, local_date):
                             output_lesson_data['place'] = "None"
                             output_lesson_data['teacher'] = "None"
                             output_data.append(output_lesson_data)
-                            to_send_text = "В этот день у преподавателя занятий нет."
+                            to_send_text = Text(f"Расписание на ",
+                                                Underline(Bold(f"{local_date.strftime('%d/%m/%Y')}")),
+                                                " для перподавателя:\n",
+                                                Italic(Bold(f"{res[0].text}\n\n")), "В этот день у преподавателя занятий нет.")
                             return to_send_text
                         else:
-
                             soup = BeautifulSoup(working_day, 'lxml')
                             lessons_arr = soup.find_all("li", class_="lesson")
 
@@ -1412,7 +1413,11 @@ def schedule_teachers_dp(teacher_name : str, local_date):
 
                                     to_send_text = to_send_text + line + "\n"
                             else:
-                                to_send_text = "В этот день у преподавателя занятий нет."
+                                to_send_text = Text(f"Расписание на ",
+                                                    Underline(Bold(f"{local_date.strftime('%d/%m/%Y')}")),
+                                                    " для перподавателя:\n",
+                                                    Italic(Bold(f"{res[0].text}\n\n")),
+                                                    "В этот день у преподавателя занятий нет.")
 
 
                         return Text(to_send_text)
@@ -1433,15 +1438,10 @@ def schedule_teachers_weekly_dp(teacher_name : str, local_date):
                 soup = BeautifulSoup(contents, 'lxml')
                 res = soup.find_all("a", class_="search-result__link", href=True)
 
-                print(res)
-
                 if len(res) > 1:
                     return Text("Найдено несколько преподавателей, напиши ФИО точнее")
                 else:
-                    try:
-                        request_link = "https://ruz.spbstu.ru" + res[0]['href'] + f"?date={local_date}"
-                    except (Exception,):
-                        return Text("В этот день у преподавателя занятий нет.")
+                    request_link = "https://ruz.spbstu.ru" + res[0]['href'] + f"?date={local_date}"
 
                     contents = requests.get(request_link)
                     match contents.status_code:
@@ -1452,8 +1452,14 @@ def schedule_teachers_weekly_dp(teacher_name : str, local_date):
                             cur_schedule = soup.find_all("li", class_="schedule__day")
 
 
-                            to_send_text = Text(f"Расписание на неделю для перподавателя:\n",
-                                                Italic(Bold(f"{res[0].text}\n\n")))  # ИЗМЕНИТЬ ФОРМАТ
+                            to_send_text = Text(f"Расписание на неделю ",
+                                                        Underline(Bold(f"{local_date.strftime('%d/%m/%Y')}")),
+                                                        " для преподавателя:\n",
+                                                        Italic(Bold(f"{res[0].text}\n\n")))
+
+                            if len(cur_schedule) == 0:
+                                to_send_text = Text(to_send_text, "В этот время у преподавателя занятий нет.")
+                                return to_send_text
 
                             for a in cur_schedule:
                                 soup = BeautifulSoup(str(a), 'lxml')
@@ -1507,7 +1513,11 @@ def schedule_teachers_weekly_dp(teacher_name : str, local_date):
 
                                         to_send_text = to_send_text + line + "\n"
                                 else:
-                                    to_send_text = "В этот день у преподавателя занятий нет."
+                                    to_send_text = Text(f"Расписание на неделю ",
+                                                        Underline(Bold(f"{local_date.strftime('%d/%m/%Y')}")),
+                                                        " для перподавателя:\n",
+                                                        Italic(Bold(f"{res[0].text}\n\n")),
+                                                        "В это время у преподавателя занятий нет.")
 
                                 to_send_text += Text("\n")
 
