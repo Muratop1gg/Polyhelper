@@ -3,6 +3,9 @@ from aiogram.utils.formatting import *
 
 WEATHER_API_KEY = "11383a89b8204536935185512243009"
 
+# Bot token can be obtained via https://t.me/BotFather
+TOKEN = "7856163448:AAGitLPQ7ACiiCobiM3IGi3l5HkWREcE9FY"
+
 start_message = Text("""
 Привет!\nЯ - """, Underline(Bold(Italic("Полихелпер"))), """, твой верный помощник в мире СПбПУ! 🎓
 
@@ -25,6 +28,21 @@ start_message = Text("""
    Давай начнем это увлекательное путешествие вместе! 🚀
    Скорее нажимай на кнопку! ⬇️
 """)
+
+db_table_name = "users"
+db_keys = {
+        "name": "TEXT",
+        "id": "INTEGER PRIMARY KEY",
+        "chatID": "INTEGER",
+        "msgID": "INTEGER",
+        "geomsgID": "INTEGER",
+        "groupID": "TEXT",
+        "schMODE": "BOOL",
+        "schDELTA": "INTEGER",
+        "groupEDIT": "BOOL",
+        "teacherEDIT": "BOOL",
+        "teacherNAME": "TEXT"
+}
 
 
 
