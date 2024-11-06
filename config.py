@@ -151,7 +151,7 @@ mainAdminID = 958162972
 #
 #КОНСТАНТЫ
 scheduleStudentLink = "https://ruz.spbstu.ru/faculty/{0}/groups/{1}?date={2}"
-scheduleTeacherLink = "https://ruz.spbstu.ru/teachers/{0}?date={1}"
+scheduleTeacherLink = "https://ruz.spbstu.ru{0}?date={1}"
 timeZone = "Turkey"
 alphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ QWERTYUIOPLKJHGFDSAZXCVBNM"
 catLink = "https://meow.senither.com/v1/random"
