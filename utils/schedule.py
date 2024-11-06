@@ -58,8 +58,6 @@ def lesson_info_finder(lesson : BeautifulSoup):
     subject_name = soup.find("div", class_="lesson__subject").text
     subject_place = soup.find("div", class_="lesson__places").text.replace(", ", ",")
     subject_type = soup.find("div", class_="lesson__type").text
-
-
     subject_teacher = soup.find("div", class_="lesson__teachers")
 
     if str(subject_teacher) != "None":
@@ -97,27 +95,30 @@ def schedule_teachers_helper(teacher_name : str, local_date) -> any:
 
     return BeautifulSoup(response.text, 'lxml'), teachers[0].text
 
-
-def schedule_dp(group_id, local_date) -> Text:
+def schedule_helper(group_id, local_date) -> any:
     try:
         marker1, marker2 = map(int, group_id.split("-"))
     except Exception as e:
         print("\033[93m", e, "\033[0m")
-        return Text("Чтобы посмотреть расписание, сначала добавь номер группы!")
+        return Text("Чтобы посмотреть расписание, сначала добавь номер группы!"), None
 
-    request_link = scheduleStudentLink.format(marker1, marker2, local_date)
+    response = requests.get(scheduleStudentLink.format(marker1, marker2, local_date))
 
-    response = requests.get(request_link)
     if response.status_code != 200:
-        return Text("Сайт с расписанием временно не доступен!")
+        return Text("Сайт с расписанием временно не доступен!"), None
 
-    soup = BeautifulSoup(response.text, 'lxml')
+    return BeautifulSoup(response.text, 'lxml'), BeautifulSoup(response.text, 'lxml').find("span", class_="lesson__group").text
+
+
+
+def schedule_dp(group_id, local_date) -> Text:
+    soup, grp = schedule_helper(group_id, local_date)
+    if type(soup) == Text: return soup
+
     cur_schedule = soup.find_all("li", class_="schedule__day")
 
     working_day = ""
     flag = 0
-
-    group = soup.find("span", class_="lesson__group").text
 
     for a in cur_schedule:
         a = str(a)
@@ -126,18 +127,16 @@ def schedule_dp(group_id, local_date) -> Text:
             working_day = a
             flag = 1
             break
-    if flag == 0:
-        to_send_text = Text("Радуйся, политехник! ", Bold("{0}".format(local_date.strftime('%d/%m/%Y'))),
+    if not flag:
+        return Text("Радуйся, политехник! ", Bold("{0}".format(local_date.strftime('%d/%m/%Y'))),
                           " занятий нет.")
-        return to_send_text
+
 
     soup = BeautifulSoup(working_day, 'lxml')
     lessons_arr = soup.find_all("li", class_="lesson")
 
-    to_send_text = Text(f"Расписание группы ", Bold(Italic(group)), " на ", Underline(
-        Bold(f"{local_date.strftime('%d/%m/%Y')}\n\n")))  # ИЗМЕНИТЬ ФОРМАТ
+    to_send_text = Text(f"Расписание на ", Bold(Underline(local_date.strftime('%d/%m/%Y'))), " для группы:\n", Bold(Italic(grp)), "\n\n")
     icons = {"Практика": "🔵", "Лабораторные": "🔴"}
-
 
     for lesson in lessons_arr:
         lesson_info = lesson_info_finder(lesson)
@@ -193,85 +192,44 @@ def schedule_teachers_dp(teacher_name : str, local_date):
 
     return Text(to_send_text)
 
+def schedule_weekly_out(schedule_days):
+    icons = {"Практика": "🔵", "Лабораторные": "🔴"}
+    to_send_text = Text("")
+
+    for day in schedule_days:
+        date = BeautifulSoup(str(day), 'lxml').find("div", class_="schedule__date").text + "\n"
+
+        to_send_text += Text(date_extender(date))
+
+
+        lessons = BeautifulSoup(str(day), 'lxml').find_all("li", class_="lesson")
+
+
+        for lesson in lessons:
+            lesson_info = lesson_info_finder(lesson)
+
+            icon = icons.get(lesson_info[2], "🟢")
+
+            to_send_text += Text(
+                f"    ", icon, Bold(Underline(lesson_info[3])), f" - {place_formatter(lesson_info[1])} - ",
+                Bold(Italic(lesson_info[0])), "\n")
+
+        to_send_text += Text("\n")
+
+    return to_send_text
 
 def schedule_weekly_dp(group_id, local_date) -> Text:
-    try:
-        marker1, marker2 = map(int, group_id.split("-"))
+    soup, grp = schedule_helper(group_id, local_date)
+    if type(soup) == Text: return soup
 
-        request_link = scheduleStudentLink.format(marker1, marker2, local_date)
+    schedule_days = soup.find_all("li", class_="schedule__day")
 
-        contents = requests.get(request_link)
-        match contents.status_code:
-            case 200:  # Если доступ к странице получен успешно
-                output_lesson_data = {}
-                contents = contents.text
-                soup = BeautifulSoup(contents, 'lxml')
-                cur_schedule = soup.find_all("li", class_="schedule__day")
+    to_send_text = Text(f"Расписание на неделю ", Bold(Underline(local_date.strftime('%d/%m/%Y'))), " для группы:\n", Bold(Italic(grp)), "\n\n")
 
-                to_send_text = Text("")
-                group = soup.find("span", class_="lesson__group").text
+    if not schedule_days:
+        return Text(to_send_text, "Радуйся, политехник! Занятий нет.")
 
-                for a in cur_schedule:
-                    soup = BeautifulSoup(str(a), 'lxml')
-
-                    date = soup.find("div", class_="schedule__date").text + "\n"
-
-                    to_send_text += Bold(Underline(date_extender(date)))
-
-                    lessons_arr = soup.find_all("li", class_="lesson")
-
-                    output_data = []
-
-                    for lesson in lessons_arr:
-                        lesson = str(lesson)
-                        soup = BeautifulSoup(lesson, 'lxml')
-                        subject_name = soup.find("div", class_="lesson__subject").text
-                        subject_place = soup.find("div", class_="lesson__places").text.replace(", ", ",")
-                        subject_type = soup.find("div", class_="lesson__type").text
-
-                        output_lesson_data['name'] = subject_name
-                        output_lesson_data['type'] = subject_type
-                        output_lesson_data['place'] = subject_place
-
-                        output_data.append(output_lesson_data)
-                        output_lesson_data = {}
-
-                    schedule = output_data
-
-                    if schedule[0]['name'] != "None":
-                        for lesson in schedule:
-                            subject_name = lesson['name']
-                            subject_time = ""
-                            for i in range(0, subject_name.find(" ")):
-                                subject_time += subject_name[i]
-                            subject_name = subject_name_formatter(subject_name.replace(subject_time, ""))
-                            subject_place = place_formatter(lesson['place'])
-
-                            subject_type = lesson['type']
-                            if subject_type == "Практика":
-                                line = Text(f"    🔵 ", Bold(Underline(f"{subject_time}")), " - ", f"{subject_place}",
-                                            " -", Bold(Italic(f"{subject_name}")))
-                            elif subject_type == "Лабораторные":
-                                line = Text(f"    🔴 ", Bold(Underline(f"{subject_time}")), " - ", f"{subject_place}",
-                                            " -", Bold(Italic(f"{subject_name}")))
-                            else:
-                                line = Text(f"    🟢 ", Bold(Underline(f"{subject_time}")), " - ", f"{subject_place}",
-                                            " -", Bold(Italic(f"{subject_name}")))
-
-                            to_send_text = to_send_text + line + "\n"
-                    else:
-                        to_send_text = Text("Радуйся, политехник! Занятий нет.")
-
-                    to_send_text += Text("\n")
-
-                to_send_text = Text(f"Расписание группы ") + Bold(Italic(group)) + " на " + Bold(Underline("неделю\n\n")) + to_send_text
-
-                return to_send_text
-
-            case 404:
-                return Text("Сайт с расписанием временно не доступен!")
-    except (Exception,):
-        return Text("Чтобы посмотреть расписание, сначала добавь номер группы!")
+    return to_send_text + schedule_weekly_out(schedule_days)
 
 
 def schedule_teachers_weekly_dp(teacher_name: str, local_date):
@@ -284,24 +242,6 @@ def schedule_teachers_weekly_dp(teacher_name: str, local_date):
         f"Расписание на неделю ", Underline(Bold(local_date.strftime('%d/%m/%Y'))), " для преподавателя:\n", Italic(Bold(teacher_name)), "\n\n")
 
     if not schedule_days:
-        return Text(to_send_text, "В это время у преподавателя занятий нет.")
+        return Text(to_send_text, "Радуйся, политехник! В это время у преподавателя занятий нет.")
 
-    icons = {"Практика": "🔵", "Лабораторные": "🔴"}
-
-    for day in schedule_days:
-        date = BeautifulSoup(str(day), 'lxml').find("div", class_="schedule__date").text + "\n"
-        to_send_text += Text(date_extender(date))
-
-        lessons = BeautifulSoup(str(day), 'lxml').find_all("li", class_="lesson")
-
-        for lesson in lessons:
-            lesson_info = lesson_info_finder(lesson)
-
-            icon = icons.get(lesson_info[2], "🟢")
-
-            to_send_text += Text(
-                f"    ", icon, Bold(Underline(lesson_info[3])), f" -  {place_formatter(lesson_info[1])} - ", Bold(Italic(lesson_info[0])), "\n")
-
-        to_send_text += Text("\n")
-
-    return to_send_text
+    return to_send_text + schedule_weekly_out(schedule_days)
