@@ -26,10 +26,11 @@ cur.execute( # Creating a table in database if not exist
 
 def db_update_element_by_chat_id(chat_id : int, var_name : str, content: any) -> bool:
     try:
-        if content is str:
+        if type(content) == str:
+
             cur.execute(f"""UPDATE {db_table_name} SET {var_name} = \"{content}\" WHERE (chatID = {chat_id}) """)
             db.commit()
-        elif content is bool:
+        elif type(content) == bool:
             if content:
                 cur.execute(f"""UPDATE {db_table_name} SET {var_name} = TRUE WHERE (chatID = {chat_id}) """)
                 db.commit()
@@ -41,7 +42,7 @@ def db_update_element_by_chat_id(chat_id : int, var_name : str, content: any) ->
             db.commit()
         return True
     except Exception as e:
-        print(e)
+        print(f"\033[91mDB UPDATE EXCEPTION: {e}\033[0m")
         return False
 
 
@@ -51,7 +52,7 @@ def db_insert_element(element_name : str, element_value : any) -> bool:
         db.commit()
         return True
     except Exception as e:
-        print(e)
+        print(f"\033[91mDB INSERT EXCEPTION: {e}\033[0m")
         return False
 
 
@@ -60,7 +61,7 @@ def db_get_element_by_chat_id(chat_id : int, var_name : str) -> any:
         out = cur.execute(f"SELECT {var_name} FROM {db_table_name} WHERE (chatID = {chat_id})").fetchone()[0]
         return out
     except Exception as e:
-        print(e)
+        print(f"\033[91mDB GET EXCEPTION: {e}\033[0m")
         return None
 
 
