@@ -19,7 +19,8 @@ cur.execute( # Creating a table in database if not exist
         {list(db_keys.keys())[7]} {list(db_keys.values())[7]},
         {list(db_keys.keys())[8]} {list(db_keys.values())[8]},
         {list(db_keys.keys())[9]} {list(db_keys.values())[9]},
-        {list(db_keys.keys())[10]} {list(db_keys.values())[10]}
+        {list(db_keys.keys())[10]} {list(db_keys.values())[10]},
+        {list(db_keys.keys())[11]} {list(db_keys.values())[11]}
     )"""
 )
 

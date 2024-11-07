@@ -104,6 +104,10 @@ def keyboard_create(menu_name):
         builder.button(text="По группе", callback_data=callbacks[12])
         builder.button(text="<< Назад", callback_data=callbacks[13])
         builder.adjust(2, 1)
+    elif menu_name == menus[7]:
+        builder.button(text="Изменить имя преподавателя⚙️", callback_data=callbacks[7])
+        builder.button(text="<< Назад", callback_data=callbacks[13])
+        builder.adjust(1, 1)
     elif menu_name == menus[12]:
         builder.button(text="Начать!", callback_data=callbacks[13])
     elif menu_name == menus[13]:

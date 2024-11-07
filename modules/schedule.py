@@ -2,6 +2,7 @@ from config import *
 import requests
 from bs4 import BeautifulSoup
 
+
 def place_formatter(date) -> str:
     date = date.replace("учебный корпус", "ук")
     date = date.replace("Главное здание", "ГЗ")
@@ -16,6 +17,7 @@ def place_formatter(date) -> str:
     date = date.replace("ауд. ", "")
     return date
 
+
 def subject_name_formatter(date) -> str:
     date = date.replace("Безопасность жизнедеятельности", "БЖД")
     date = date.replace("Модуль саморазвития ", "")
@@ -28,6 +30,7 @@ def subject_name_formatter(date) -> str:
     date = date.replace("Радиотехнические цепи и сигналы", "РЦиС")
     date = date.replace("(", "").replace(")", "")
     return date
+
 
 def date_extender(date) -> str:
     date = date.replace("янв.", "января")
@@ -52,6 +55,7 @@ def date_extender(date) -> str:
     date = date.replace("вс", "Воскресенье")
     return date
 
+
 def lesson_info_finder(lesson : BeautifulSoup):
     soup = BeautifulSoup(str(lesson), 'lxml')
 
@@ -68,7 +72,6 @@ def lesson_info_finder(lesson : BeautifulSoup):
     subject_time, subject_name = subject_name.split()[0], " ".join(subject_name.split()[1:])
 
     return subject_name, subject_place, subject_type, subject_time, subject_teacher
-
 
 
 def schedule_teachers_helper(teacher_name : str, local_date) -> any:
@@ -95,6 +98,7 @@ def schedule_teachers_helper(teacher_name : str, local_date) -> any:
 
     return BeautifulSoup(response.text, 'lxml'), teachers[0].text
 
+
 def schedule_helper(group_id, local_date) -> any:
     try:
         marker1, marker2 = map(int, group_id.split("-"))
@@ -108,7 +112,6 @@ def schedule_helper(group_id, local_date) -> any:
         return Text("Сайт с расписанием временно не доступен!"), None
 
     return BeautifulSoup(response.text, 'lxml'), BeautifulSoup(response.text, 'lxml').find("span", class_="lesson__group").text
-
 
 
 def schedule_dp(group_id, local_date) -> Text:
@@ -192,6 +195,7 @@ def schedule_teachers_dp(teacher_name : str, local_date):
 
     return Text(to_send_text)
 
+
 def schedule_weekly_out(schedule_days):
     icons = {"Практика": "🔵", "Лабораторные": "🔴"}
     to_send_text = Text("")
@@ -217,6 +221,7 @@ def schedule_weekly_out(schedule_days):
         to_send_text += Text("\n")
 
     return to_send_text
+
 
 def schedule_weekly_dp(group_id, local_date) -> Text:
     soup, grp = schedule_helper(group_id, local_date)

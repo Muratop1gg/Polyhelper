@@ -6,7 +6,10 @@ from random import randint
 from cats import *
 from aiogram.types import CallbackQuery
 from utils.db import *
-from utils.schedule import *
+
+from modules.schedule import *
+from modules.about_teacher import *
+
 from keyboards import keyboard_create, callbacks, menus
 from aiogram import Bot, Dispatcher, types
 from aiogram.client.default import DefaultBotProperties
@@ -31,6 +34,7 @@ async def main_command_helper(message: Message) -> None:
     if db_count_by_element(list(db_keys.keys())[2], message.chat.id):
         old_id = db_get_element_by_chat_id(message.chat.id, list(db_keys.keys())[3])
         db_update_element_by_chat_id(message.chat.id, list(db_keys.keys())[8], False)
+        db_update_element_by_chat_id(message.chat.id, list(db_keys.keys())[11], False)
         try:
             await bot(methods.delete_message.DeleteMessage(chat_id=message.chat.id, message_id=old_id))
         except (Exception,):
@@ -117,6 +121,7 @@ async def command_shout_handler(message: Message):
 async def al(message: Message) -> None:
     is_group_editing = db_get_element_by_chat_id(message.chat.id, list(db_keys.keys())[8])
     is_teacher_name_editing = db_get_element_by_chat_id(message.chat.id, list(db_keys.keys())[9])
+    is_teacher_finder_name_editing = db_get_element_by_chat_id(message.chat.id, list(db_keys.keys())[11])
 
     if is_group_editing:
         try:
@@ -157,6 +162,29 @@ async def al(message: Message) -> None:
             message_main, schedule_mode, delta, teacher_name = schedule_db_call(message.chat.id, True)
 
             await schedule_helper(message_main, schedule_mode, teacher_name, chat_id, delta, True)
+
+        except (Exception,):
+            pass
+
+    elif is_teacher_finder_name_editing:
+        try:
+            name = message.text
+            chat_id = message.chat.id
+            db_get_element_by_chat_id(message.chat.id, list(db_keys.keys())[3])
+            db_update_element_by_chat_id(message.chat.id, list(db_keys.keys())[10], content=str(name))
+
+            await (methods.delete_message.DeleteMessage(chat_id=chat_id, message_id=message.message_id)).as_(bot)
+            message_main = db_get_element_by_chat_id(chat_id, list(db_keys.keys())[3])
+
+            out = about_teacher_helper(name).as_kwargs()
+
+            if (out['text'] != "Найдено несколько преподавателей, напиши ФИО точнее"
+                    and out['text'] != "Сайт с информацией СПБПУ временно не доступен!"):
+                db_update_element_by_chat_id(message.chat.id, list(db_keys.keys())[11], content=False)
+
+            await methods.edit_message_text.EditMessageText(message_id=message_main, chat_id=chat_id,
+                                                            **out,
+                                                            reply_markup=keyboard_create(menus[7])).as_(bot)
 
         except (Exception,):
             pass
@@ -255,10 +283,12 @@ async def keyboard(query: types.CallbackQuery):
 
 
 @dp.callback_query(F.data == callbacks[7])
-async def keyboard(query: types.CallbackQuery):
+async def l(query: CallbackQuery) -> None:
     message_main = db_get_element_by_chat_id(query.message.chat.id, list(db_keys.keys())[3])
-    await query.message.edit_text(id=message_main, text="Ты открыл(-а) информацию о преподавателях. Выбери действие  ⬇️",
+
+    await query.message.edit_text(id=message_main, text="Для поиска информации о преподавателе введи ФИО преподавателя",
                                   reply_markup=keyboard_create(menus[7]))
+    db_update_element_by_chat_id(query.message.chat.id, list(db_keys.keys())[11], True)
 
 
 @dp.callback_query(F.data == callbacks[8])
@@ -285,6 +315,9 @@ async def keyboard(query: types.CallbackQuery):
 
 @dp.callback_query(F.data == callbacks[13])
 async def back(query: types.CallbackQuery):
+    db_update_element_by_chat_id(query.message.chat.id, list(db_keys.keys())[8], False)
+    db_update_element_by_chat_id(query.message.chat.id, list(db_keys.keys())[9], False)
+    db_update_element_by_chat_id(query.message.chat.id, list(db_keys.keys())[11], False)
     message_main = db_get_element_by_chat_id(query.message.chat.id, list(db_keys.keys())[3])
     await query.message.edit_text(id=message_main, text="Главное меню",
                                   reply_markup=keyboard_create(menus[11]))
@@ -712,7 +745,6 @@ async def l(query: CallbackQuery) -> None:
     db_update_element_by_chat_id(query.message.chat.id, list(db_keys.keys())[9], True)
 
 
-
 @dp.callback_query(F.data == callbacks[12])
 async def l(query: CallbackQuery) -> None:
     message_main, schedule_mode, delta, group_id = schedule_db_call(query.message.chat.id, False)
@@ -1011,20 +1043,20 @@ async def start_config():
     await bot.set_my_commands(commands)
 
 
-async def main() -> None:
-    # Initialize Bot instance with default bot properties which will be passed to all API calls
-
-    await start_config()
-    # And the run events dispatching
-    await dp.start_polling(bot)
-
-
 async def check_url(m1, m2):
     response = requests.get(scheduleStudentLink.format(m1, m2, datetime.now().date()))
     if int(response.status_code) == 200:
         return True
     else:
         return False
+
+
+async def main() -> None:
+    # Initialize Bot instance with default bot properties which will be passed to all API calls
+
+    await start_config()
+    # And the run events dispatching
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":

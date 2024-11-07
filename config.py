@@ -41,7 +41,8 @@ db_keys = {
         "schDELTA": "INTEGER",
         "groupEDIT": "BOOL",
         "teacherEDIT": "BOOL",
-        "teacherNAME": "TEXT"
+        "teacherNAME": "TEXT",
+        "finderEDIT": "BOOL"
 }
 
 
@@ -157,6 +158,7 @@ alphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ Q
 catLink = "https://meow.senither.com/v1/random"
 catLinkGet = "https://meow.senither.com/c/{0}"
 searchTeacherLink = "https://ruz.spbstu.ru/search/teacher?q="
+aboutTeacherLink = "https://www.spbstu.ru/university/about-the-university/personalities/?arrFilter_ff%5BNAME%5D={0}&set_filter=Найти"
 
 commands = [
     botCommand(command="/start", description="Запустить бота"),
